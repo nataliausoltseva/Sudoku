@@ -1,5 +1,7 @@
 package com.nataliausoltseva.sudoku
 
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,13 +14,19 @@ private const val GRID_SIZE_SQUARE_ROOT = 3
 class SudokuViewModel: ViewModel() {
     private val _uiState = MutableStateFlow(GameUIState())
     val uiState: StateFlow<GameUIState> = _uiState.asStateFlow()
-    private var grid = Array(GRID_SIZE) { IntArray(GRID_SIZE) { 0 } }
+    private var grid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+    private var filledGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+    private var usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+    private var selectionNumbers: Array<MutableIntState> = Array(9) { mutableIntStateOf(0) }
+    private var selectedDigit: Int = 0
+    private var selectedCellRow: Int? = null
+    private var selectedCellColumn: Int? = null
 
     private fun fillGrid() {
         fillDiagonally()
         fillRemaining(0, GRID_SIZE_SQUARE_ROOT)
         removeDigits()
-        _uiState.value = GameUIState(matrix = grid)
+        updateState()
     }
 
     private fun fillDiagonally() {
@@ -36,7 +44,9 @@ class SudokuViewModel: ViewModel() {
                     generatedDigit = getRandomNumber(GRID_SIZE)
                 } while (!isUnusedInBox(row, column, generatedDigit))
 
-                grid[row + i][column + j] = generatedDigit
+                grid[row + i][column + j].intValue = generatedDigit
+                filledGrid[row + i][column + j].intValue = generatedDigit
+                usersGrid[row + i][column + j].intValue = generatedDigit
             }
         }
     }
@@ -44,7 +54,7 @@ class SudokuViewModel: ViewModel() {
     private fun isUnusedInBox(rowStart: Int, columnStart: Int, digit: Int) : Boolean {
         for (i in 0 until GRID_SIZE_SQUARE_ROOT) {
             for (j in 0 until GRID_SIZE_SQUARE_ROOT) {
-                if (grid[rowStart + i][columnStart + j] == digit) {
+                if (grid[rowStart + i][columnStart + j].intValue == digit) {
                     return false
                 }
             }
@@ -84,12 +94,14 @@ class SudokuViewModel: ViewModel() {
 
         for (num in 1..GRID_SIZE) {
             if (checkIfSafe(i, j, num)) {
-                grid[i][j] = num
+                grid[i][j].intValue = num
+                filledGrid[i][j].intValue = num
+                usersGrid[i][j].intValue = num
                 if (fillRemaining(i, j + 1)) {
                     return true
                 }
-
-                grid[i][j] = 0
+                grid[i][j].intValue = 0
+                usersGrid[i][j].intValue = 0
             }
         }
         return false
@@ -107,7 +119,7 @@ class SudokuViewModel: ViewModel() {
 
     private fun isUnusedInRow(row: Int, digit: Int) : Boolean {
         for (i in 0 until GRID_SIZE) {
-            if (grid[row][i] == digit) {
+            if (grid[row][i].intValue == digit) {
                 return false
             }
         }
@@ -116,7 +128,7 @@ class SudokuViewModel: ViewModel() {
 
     private fun isUnusedInColumn(column: Int, digit: Int) : Boolean {
         for (i in 0 until GRID_SIZE) {
-            if (grid[i][column] == digit) {
+            if (grid[i][column].intValue == digit) {
                 return false
             }
         }
@@ -136,16 +148,55 @@ class SudokuViewModel: ViewModel() {
                 j -= 1
             }
 
-            if (grid[i][j] != 0) {
+            if (grid[i][j].intValue != 0) {
+                val currentValue = grid[i][j].intValue
+                selectionNumbers[currentValue - 1].intValue += 1
                 digitsToRemove--
-                grid[i][j] = 0
+                grid[i][j].intValue = 0
+                usersGrid[i][j].intValue = 0
             }
         }
     }
 
     fun onRegenerate() {
-        grid = Array(GRID_SIZE) { IntArray(GRID_SIZE) { 0 } }
+        grid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+        usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+        selectionNumbers = Array(9) { mutableIntStateOf(0) }
         fillGrid()
+    }
+
+    fun onSelection(digit: Int) {
+        selectedDigit = digit
+        insertDigit()
+    }
+
+    fun onSelectCell(row: Int, column: Int) {
+        selectedCellRow = row
+        selectedCellColumn = column
+        insertDigit()
+    }
+
+    private fun insertDigit() {
+        if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
+            usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
+            selectionNumbers[selectedDigit - 1].intValue -= 1
+            selectedDigit = 0
+            selectedCellRow = null
+            selectedCellColumn = null
+        }
+        updateState()
+    }
+
+    private fun updateState() {
+        _uiState.value = GameUIState(
+            matrix = grid,
+            usersMatrix = usersGrid,
+            filledMatrix = filledGrid,
+            selectionNumbers,
+            selectedDigit,
+            selectedCellRow,
+            selectedCellColumn
+        )
     }
 
     private fun getRandomNumber(multiplyBy: Int): Int {
