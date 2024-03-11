@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,15 +62,35 @@ fun SudokuGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
         verticalArrangement = Arrangement.Center,
+        modifier = Modifier.border(width = 1.dp, color = Color(0xFFCAC4D0)),
         content = {
             items(81) {index ->
                 val rowIndex = index / 9
                 val columnIndex = index % 9
                 val gridValue = grid[rowIndex][columnIndex].intValue
+                val cellRowIndex = index % 3
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer,
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                    onClick = { sudokuViewModel.onSelectCell(rowIndex, columnIndex) }
+                    onClick = { sudokuViewModel.onSelectCell(rowIndex, columnIndex) },
+                    modifier = Modifier.fillMaxSize().drawBehind {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E) else Color(0xFFCAC4D0)
+                        drawLine(
+                            start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+                            end = Offset(x = 0f, y = 0f),
+                            color = rowDividerColour,
+                            strokeWidth = 2.dp.toPx()
+                        )
+
+                        val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E) else Color(0xFFCAC4D0)
+                        drawLine(
+                            start = Offset(x = 0f, y = canvasHeight),
+                            end = Offset(x = 0f, y = 0f),
+                            color = columnDividerColour,
+                            strokeWidth = 2.dp.toPx()
+                        )
+                    }
                 ) {
                     var displayValue = ""
                     if (gridValue != 0) {
