@@ -181,8 +181,6 @@ class SudokuViewModel: ViewModel() {
             usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
             selectionNumbers[selectedDigit - 1].intValue -= 1
             selectedDigit = 0
-            selectedCellRow = null
-            selectedCellColumn = null
         }
         updateState()
     }

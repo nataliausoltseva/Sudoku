@@ -58,6 +58,8 @@ fun SudokuGrid(
     val grid: Array<Array<MutableIntState>> = sudokuUIState.usersMatrix
     val filledGrid: Array<Array<MutableIntState>> = sudokuUIState.filledMatrix
     val initialGrid: Array<Array<MutableIntState>> = sudokuUIState.matrix
+    val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
+    val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -69,8 +71,15 @@ fun SudokuGrid(
                 val columnIndex = index % 9
                 val gridValue = grid[rowIndex][columnIndex].intValue
                 val cellRowIndex = index % 3
+                val isCurrentCell = selectedCellRow == rowIndex && selectedCellColumn == columnIndex
+                val currentGridCellValue = grid[selectedCellRow!!][selectedCellColumn!!].intValue
+
+                val backgroundCellColour = if (isCurrentCell) Color(0xFFEFB8C8)
+                    else if (gridValue > 0 && currentGridCellValue == gridValue) Color(0xFF492532)
+                    else MaterialTheme.colorScheme.secondaryContainer;
+
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = backgroundCellColour,
                     onClick = { sudokuViewModel.onSelectCell(rowIndex, columnIndex) },
                     modifier = Modifier.fillMaxSize().drawBehind {
                         val canvasWidth = size.width
@@ -100,16 +109,10 @@ fun SudokuGrid(
                     val expectedValue = filledGrid[rowIndex][columnIndex].intValue
                     val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
 
-                    var colour = Color.White
-
-                    // If inserted value is not the expected value then a user made a mistake
-                    if (gridValue != 0 && expectedValue != gridValue) {
-                        colour = Color.Red
-
-                    // Apply different colour to all editable values
-                    } else if (initialGridValue == 0) {
-                        colour = Color.Cyan
-                    }
+                    val colour =  if (gridValue != 0 && expectedValue != gridValue) Color.Red
+                        else if (isCurrentCell) Color(0xFF492532)
+                        else if (initialGridValue == 0) Color(0xFFEFB8C8)
+                        else Color.White
 
                     Text(
                         text = displayValue,
