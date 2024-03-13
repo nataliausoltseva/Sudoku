@@ -58,6 +58,8 @@ fun SudokuGrid(
     val grid: Array<Array<MutableIntState>> = sudokuUIState.usersMatrix
     val filledGrid: Array<Array<MutableIntState>> = sudokuUIState.filledMatrix
     val initialGrid: Array<Array<MutableIntState>> = sudokuUIState.matrix
+    val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
+    val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -69,27 +71,67 @@ fun SudokuGrid(
                 val columnIndex = index % 9
                 val gridValue = grid[rowIndex][columnIndex].intValue
                 val cellRowIndex = index % 3
+                val isCurrentCell = selectedCellRow == rowIndex && selectedCellColumn == columnIndex
+                var currentGridCellValue = 0
+
+                if (selectedCellRow != null && selectedCellColumn != null) {
+                    currentGridCellValue = grid[selectedCellRow][selectedCellColumn].intValue
+                }
+
+                val backgroundCellColour = if (isCurrentCell) Color(0xFFEFB8C8)
+                else if (gridValue > 0 && currentGridCellValue == gridValue) Color(0xFF492532)
+                else MaterialTheme.colorScheme.secondaryContainer;
+
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = backgroundCellColour,
                     onClick = { sudokuViewModel.onSelectCell(rowIndex, columnIndex) },
                     modifier = Modifier.fillMaxSize().drawBehind {
                         val canvasWidth = size.width
                         val canvasHeight = size.height
-                        val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E) else Color(0xFFCAC4D0)
-                        drawLine(
-                            start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
-                            end = Offset(x = 0f, y = 0f),
-                            color = rowDividerColour,
-                            strokeWidth = 2.dp.toPx()
-                        )
 
-                        val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E) else Color(0xFFCAC4D0)
-                        drawLine(
-                            start = Offset(x = 0f, y = canvasHeight),
-                            end = Offset(x = 0f, y = 0f),
-                            color = columnDividerColour,
-                            strokeWidth = 2.dp.toPx()
-                        )
+                        val hasVerticalOutline = selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
+                        val ignoreVerticalOutline = selectedCellColumn == null ||
+                                isCurrentCell ||
+                                (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
+                         if (hasVerticalOutline && !ignoreVerticalOutline) {
+                            drawLine(
+                                start = Offset(x = 0f, y = canvasHeight),
+                                end = Offset(x = 0f, y = 0f),
+                                color = Color(0xFF6750A4),
+                                strokeWidth = 4.dp.toPx()
+                            )
+                        } else {
+                             val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E)
+                                else Color(0xFFCAC4D0)
+                             drawLine(
+                                 start = Offset(x = 0f, y = canvasHeight),
+                                 end = Offset(x = 0f, y = 0f),
+                                 color = columnDividerColour,
+                                 strokeWidth = 2.dp.toPx()
+                             )
+                         }
+
+                        val hasHorizontalOutline = selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
+                        val ignoreHorizontalOutline = isCurrentCell ||
+                                selectedCellRow == null ||
+                                (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
+                        if (hasHorizontalOutline && !ignoreHorizontalOutline) {
+                            drawLine(
+                                start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+                                end = Offset(x = 0f, y = 0f),
+                                color = Color(0xFF6750A4),
+                                strokeWidth = 4.dp.toPx()
+                            )
+                        } else {
+                            val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E)
+                                else Color(0xFFCAC4D0)
+                            drawLine(
+                                start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+                                end = Offset(x = 0f, y = 0f),
+                                color = rowDividerColour,
+                                strokeWidth = 2.dp.toPx()
+                            )
+                        }
                     }
                 ) {
                     var displayValue = ""
@@ -100,16 +142,10 @@ fun SudokuGrid(
                     val expectedValue = filledGrid[rowIndex][columnIndex].intValue
                     val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
 
-                    var colour = Color.White
-
-                    // If inserted value is not the expected value then a user made a mistake
-                    if (gridValue != 0 && expectedValue != gridValue) {
-                        colour = Color.Red
-
-                    // Apply different colour to all editable values
-                    } else if (initialGridValue == 0) {
-                        colour = Color.Cyan
-                    }
+                    val colour =  if (gridValue != 0 && expectedValue != gridValue) Color.Red
+                        else if (isCurrentCell) Color(0xFF492532)
+                        else if (initialGridValue == 0) Color(0xFFEFB8C8)
+                        else Color.White
 
                     Text(
                         text = displayValue,
