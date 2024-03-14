@@ -4,18 +4,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.collectAsState
@@ -25,7 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
 
@@ -40,9 +49,56 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MistakeCounter()
+                            RestartButton()
+                        }
                         SudokuGrid()
-                        RestartButton()
                         SelectionNumbers()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MistakeCounter(
+    sudokuViewModel: SudokuViewModel = viewModel()
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val mistakesNum: Int = sudokuUIState.mistakesNum.intValue
+
+    Text(text = "Mistakes: $mistakesNum/3")
+
+    if (mistakesNum == 3) {
+        Dialog(
+            onDismissRequest = {},
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFF79747E))
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(6.dp)
+                ) {
+                    Text(
+                        text = "Game Over",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "You made 3 mistakes and lost this game.",
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    TextButton(
+                        onClick = { sudokuViewModel.onRegenerate() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Restart")
                     }
                 }
             }
@@ -85,54 +141,58 @@ fun SudokuGrid(
                 Surface(
                     color = backgroundCellColour,
                     onClick = { sudokuViewModel.onSelectCell(rowIndex, columnIndex) },
-                    modifier = Modifier.fillMaxSize().drawBehind {
-                        val canvasWidth = size.width
-                        val canvasHeight = size.height
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val canvasWidth = size.width
+                            val canvasHeight = size.height
 
-                        val hasVerticalOutline = selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
-                        val ignoreVerticalOutline = selectedCellColumn == null ||
-                                isCurrentCell ||
-                                (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
-                         if (hasVerticalOutline && !ignoreVerticalOutline) {
-                            drawLine(
-                                start = Offset(x = 0f, y = canvasHeight),
-                                end = Offset(x = 0f, y = 0f),
-                                color = Color(0xFF6750A4),
-                                strokeWidth = 4.dp.toPx()
-                            )
-                        } else {
-                             val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E)
+                            val hasVerticalOutline =
+                                selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
+                            val ignoreVerticalOutline = selectedCellColumn == null ||
+                                    isCurrentCell ||
+                                    (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
+                            if (hasVerticalOutline && !ignoreVerticalOutline) {
+                                drawLine(
+                                    start = Offset(x = 0f, y = canvasHeight),
+                                    end = Offset(x = 0f, y = 0f),
+                                    color = Color(0xFF6750A4),
+                                    strokeWidth = 4.dp.toPx()
+                                )
+                            } else {
+                                val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E)
                                 else Color(0xFFCAC4D0)
-                             drawLine(
-                                 start = Offset(x = 0f, y = canvasHeight),
-                                 end = Offset(x = 0f, y = 0f),
-                                 color = columnDividerColour,
-                                 strokeWidth = 2.dp.toPx()
-                             )
-                         }
+                                drawLine(
+                                    start = Offset(x = 0f, y = canvasHeight),
+                                    end = Offset(x = 0f, y = 0f),
+                                    color = columnDividerColour,
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                            }
 
-                        val hasHorizontalOutline = selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
-                        val ignoreHorizontalOutline = isCurrentCell ||
-                                selectedCellRow == null ||
-                                (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
-                        if (hasHorizontalOutline && !ignoreHorizontalOutline) {
-                            drawLine(
-                                start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
-                                end = Offset(x = 0f, y = 0f),
-                                color = Color(0xFF6750A4),
-                                strokeWidth = 4.dp.toPx()
-                            )
-                        } else {
-                            val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E)
+                            val hasHorizontalOutline =
+                                selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
+                            val ignoreHorizontalOutline = isCurrentCell ||
+                                    selectedCellRow == null ||
+                                    (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
+                            if (hasHorizontalOutline && !ignoreHorizontalOutline) {
+                                drawLine(
+                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+                                    end = Offset(x = 0f, y = 0f),
+                                    color = Color(0xFF6750A4),
+                                    strokeWidth = 4.dp.toPx()
+                                )
+                            } else {
+                                val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E)
                                 else Color(0xFFCAC4D0)
-                            drawLine(
-                                start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
-                                end = Offset(x = 0f, y = 0f),
-                                color = rowDividerColour,
-                                strokeWidth = 2.dp.toPx()
-                            )
+                                drawLine(
+                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+                                    end = Offset(x = 0f, y = 0f),
+                                    color = rowDividerColour,
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                            }
                         }
-                    }
                 ) {
                     var displayValue = ""
                     if (gridValue != 0) {
@@ -165,7 +225,10 @@ fun RestartButton(
     Button(
         onClick = { sudokuViewModel.onRegenerate() },
     ) {
-        Text("Regenerate")
+        Icon (
+            Icons.Rounded.Refresh,
+            contentDescription = "Refresh icon"
+        )
     }
 }
 
