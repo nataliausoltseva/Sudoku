@@ -11,6 +11,7 @@ data class GameUIState(
     val selectedDigit: Int = 0,
     val selectedCellRow: Int? = null,
     val selectedCellColumn: Int? = null,
+    val mistakesNum: MutableIntState = mutableIntStateOf(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -25,6 +26,7 @@ data class GameUIState(
         if (selectedDigit != other.selectedDigit) return false
         if (selectedCellRow != other.selectedCellRow) return false
         if (selectedCellColumn != other.selectedCellColumn) return false
+        if (mistakesNum != other.mistakesNum) return false
 
         return true
     }
@@ -37,6 +39,7 @@ data class GameUIState(
         result = 31 * result + selectedDigit
         result = 31 * result + (selectedCellRow ?: 0)
         result = 31 * result + (selectedCellColumn ?: 0)
+        result = 31 * result + mistakesNum.intValue
         return result
     }
 }

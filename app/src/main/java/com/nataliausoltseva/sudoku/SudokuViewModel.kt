@@ -21,6 +21,7 @@ class SudokuViewModel: ViewModel() {
     private var selectedDigit: Int = 0
     private var selectedCellRow: Int? = null
     private var selectedCellColumn: Int? = null
+    private var mistakesNum: MutableIntState = mutableIntStateOf(0)
 
     private fun fillGrid() {
         fillDiagonally()
@@ -162,6 +163,7 @@ class SudokuViewModel: ViewModel() {
         grid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
         usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
         selectionNumbers = Array(9) { mutableIntStateOf(0) }
+        mistakesNum = mutableIntStateOf(0)
         fillGrid()
     }
 
@@ -181,6 +183,10 @@ class SudokuViewModel: ViewModel() {
             usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
             selectionNumbers[selectedDigit - 1].intValue -= 1
             selectedDigit = 0
+
+            if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
+                mistakesNum.intValue++
+            }
         }
         updateState()
     }
@@ -193,7 +199,8 @@ class SudokuViewModel: ViewModel() {
             selectionNumbers,
             selectedDigit,
             selectedCellRow,
-            selectedCellColumn
+            selectedCellColumn,
+            mistakesNum
         )
     }
 
