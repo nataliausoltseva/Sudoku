@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        LevelPicker()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -66,6 +67,29 @@ class MainActivity : ComponentActivity() {
                         SelectionNumbers()
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun LevelPicker(
+    sudokuViewModel: SudokuViewModel = viewModel()
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val selectedLevel = sudokuUIState.selectedLevel
+    Row {
+        for (i in LEVELS.indices) {
+            val colour = if (LEVELS[i] == selectedLevel.value) Color(0xFFEFB8C8) else Color.Unspecified
+            Surface(
+                onClick = { sudokuViewModel.onLevelSelect(i) }
+            ) {
+                Text(
+                    text = LEVELS[i],
+                    Modifier.padding(4.dp),
+                    color = colour
+
+                )
             }
         }
     }

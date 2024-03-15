@@ -1,7 +1,9 @@
 package com.nataliausoltseva.sudoku
 
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,6 +12,9 @@ import kotlin.math.floor
 
 private const val GRID_SIZE = 9
 private const val GRID_SIZE_SQUARE_ROOT = 3
+
+val LEVELS = arrayOf("Easy", "Medium", "Hard", "Expert", "Master")
+private val NUM_TO_REMOVE = arrayOf(1, 2, 4, 6, 7)
 
 class SudokuViewModel: ViewModel() {
     private val _uiState = MutableStateFlow(GameUIState())
@@ -22,6 +27,8 @@ class SudokuViewModel: ViewModel() {
     private var selectedCellRow: Int? = null
     private var selectedCellColumn: Int? = null
     private var mistakesNum: MutableIntState = mutableIntStateOf(0)
+    private var selectedLevel: MutableState<String> = mutableStateOf("Easy")
+    private var numToRemove: Int = NUM_TO_REMOVE[0]
 
     private fun fillGrid() {
         fillDiagonally()
@@ -138,25 +145,29 @@ class SudokuViewModel: ViewModel() {
     }
 
     private fun removeDigits() {
-        var digitsToRemove = 20
+        for (j in 0 until GRID_SIZE) {
+            val level = numToRemove
+            for (k in 0 until (level..GRID_SIZE).random()) {
+                val i = getRandomUniqueCell(j)
 
-        while (digitsToRemove > 0) {
-            val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
-            val i = cellId / GRID_SIZE
-            var j = cellId % GRID_SIZE
-
-            if (j != 0) {
-                j -= 1
-            }
-
-            if (grid[i][j].intValue != 0) {
-                val currentValue = grid[i][j].intValue
-                selectionNumbers[currentValue - 1].intValue += 1
-                digitsToRemove--
-                grid[i][j].intValue = 0
-                usersGrid[i][j].intValue = 0
+                if (grid[i][j].intValue != 0) {
+                    val currentValue = grid[i][j].intValue
+                    selectionNumbers[currentValue - 1].intValue += 1
+                    grid[i][j].intValue = 0
+                    usersGrid[i][j].intValue = 0
+                }
             }
         }
+    }
+
+    private fun getRandomUniqueCell(column: Int): Int {
+        val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
+        val i = cellId / GRID_SIZE
+        if (grid[i][column].intValue == 0) {
+            getRandomUniqueCell(column)
+        }
+
+        return i
     }
 
     fun onRegenerate() {
@@ -176,6 +187,12 @@ class SudokuViewModel: ViewModel() {
         selectedCellRow = row
         selectedCellColumn = column
         insertDigit()
+    }
+
+    fun onLevelSelect(index: Int) {
+        selectedLevel.value = LEVELS[index]
+        numToRemove = NUM_TO_REMOVE[index]
+        onRegenerate()
     }
 
     private fun insertDigit() {
@@ -200,7 +217,8 @@ class SudokuViewModel: ViewModel() {
             selectedDigit,
             selectedCellRow,
             selectedCellColumn,
-            mistakesNum
+            mistakesNum,
+            selectedLevel
         )
     }
 
