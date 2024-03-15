@@ -23,9 +23,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -37,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
+import kotlinx.coroutines.delay
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,9 +56,10 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             MistakeCounter()
+                            Timer()
                             RestartButton()
                         }
                         SudokuGrid()
@@ -105,6 +112,34 @@ fun MistakeCounter(
         }
     }
 }
+
+@Composable
+fun Timer() {
+    val timerConverter = remember { mutableStateOf("") }
+    val loadedCurrentMillis = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(key1 = timerConverter.value) {
+        delay(1000)
+        timerConverter.value =
+            converting(System.currentTimeMillis() - loadedCurrentMillis.longValue)
+    }
+    Text(
+        text = timerConverter.value,
+        Modifier.padding(10.dp)
+    )
+}
+
+fun converting(millis: Long): String =
+    String.format(
+        "%02d:%02d:%02d",
+        TimeUnit.MILLISECONDS.toHours(millis),
+        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(
+            TimeUnit.MILLISECONDS.toHours(millis)
+        ),
+        TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(
+            TimeUnit.MILLISECONDS.toMinutes(millis)
+        )
+    )
+
 
 @Composable
 fun SudokuGrid(
