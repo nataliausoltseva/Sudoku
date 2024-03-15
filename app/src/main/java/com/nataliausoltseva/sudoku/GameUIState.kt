@@ -1,7 +1,9 @@
 package com.nataliausoltseva.sudoku
 
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 
 data class GameUIState(
     val matrix: Array<Array<MutableIntState>> = Array(9) { Array(9) { mutableIntStateOf(0) } },
@@ -12,6 +14,7 @@ data class GameUIState(
     val selectedCellRow: Int? = null,
     val selectedCellColumn: Int? = null,
     val mistakesNum: MutableIntState = mutableIntStateOf(0),
+    val selectedLevel: MutableState<String> = mutableStateOf("Easy"),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -27,6 +30,7 @@ data class GameUIState(
         if (selectedCellRow != other.selectedCellRow) return false
         if (selectedCellColumn != other.selectedCellColumn) return false
         if (mistakesNum != other.mistakesNum) return false
+        if (selectedLevel != other.selectedLevel) return false
 
         return true
     }
@@ -39,7 +43,9 @@ data class GameUIState(
         result = 31 * result + selectedDigit
         result = 31 * result + (selectedCellRow ?: 0)
         result = 31 * result + (selectedCellColumn ?: 0)
-        result = 31 * result + mistakesNum.intValue
+        result = 31 * result + mistakesNum.hashCode()
+        result = 31 * result + selectedLevel.hashCode()
         return result
     }
+
 }
