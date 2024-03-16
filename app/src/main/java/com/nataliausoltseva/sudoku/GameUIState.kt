@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 
 data class GameUIState(
+    val hasStarted: MutableState<Boolean> = mutableStateOf(false),
     val matrix: Array<Array<MutableIntState>> = Array(9) { Array(9) { mutableIntStateOf(0) } },
     val usersMatrix: Array<Array<MutableIntState>> = Array(9) { Array(9) { mutableIntStateOf(0) } },
     val filledMatrix: Array<Array<MutableIntState>> = Array(9) { Array(9) {  mutableIntStateOf(0) } },
@@ -22,6 +23,7 @@ data class GameUIState(
 
         other as GameUIState
 
+        if (hasStarted != other.hasStarted) return false
         if (!matrix.contentDeepEquals(other.matrix)) return false
         if (!usersMatrix.contentDeepEquals(other.usersMatrix)) return false
         if (!filledMatrix.contentDeepEquals(other.filledMatrix)) return false
@@ -36,7 +38,8 @@ data class GameUIState(
     }
 
     override fun hashCode(): Int {
-        var result = matrix.contentDeepHashCode()
+        var result = hasStarted.hashCode()
+        result = 31 * result + matrix.contentDeepHashCode()
         result = 31 * result + usersMatrix.contentDeepHashCode()
         result = 31 * result + filledMatrix.contentDeepHashCode()
         result = 31 * result + selectionNumbers.contentHashCode()
@@ -47,5 +50,4 @@ data class GameUIState(
         result = 31 * result + selectedLevel.hashCode()
         return result
     }
-
 }

@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -51,21 +55,7 @@ class MainActivity : ComponentActivity() {
             SudokuTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        LevelPicker()
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            MistakeCounter()
-                            Timer()
-                            RestartButton()
-                        }
-                        SudokuGrid()
-                        SelectionNumbers()
-                    }
+                    MainApp()
                 }
             }
         }
@@ -73,28 +63,62 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LevelPicker(
+fun MainApp(
     sudokuViewModel: SudokuViewModel = viewModel()
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    val selectedLevel = sudokuUIState.selectedLevel
-    Row {
-        for (i in LEVELS.indices) {
-            val colour = if (LEVELS[i] == selectedLevel.value) Color(0xFFEFB8C8) else Color.Unspecified
-            Surface(
-                onClick = { sudokuViewModel.onLevelSelect(i) }
-            ) {
-                Text(
-                    text = LEVELS[i],
-                    Modifier.padding(4.dp),
-                    color = colour
+    val hasStarted = sudokuUIState.hasStarted.value
 
-                )
+    if (!hasStarted) {
+        WelcomeDialog()
+    } else {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MistakeCounter()
+                Timer()
+                RestartButton()
+            }
+            SudokuGrid()
+            SelectionNumbers()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WelcomeDialog(
+    sudokuViewModel: SudokuViewModel = viewModel()
+) {
+    AlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF79747E)),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(6.dp)
+        ) {
+            Text(
+                text = "Choose Your Puzzle:",
+                fontWeight = FontWeight.Bold
+            )
+            for (i in LEVELS.indices) {
+                TextButton(
+                    onClick = { sudokuViewModel.onStart(i) },
+                ) {
+                    Text(LEVELS[i])
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MistakeCounter(
     sudokuViewModel: SudokuViewModel = viewModel()
@@ -105,32 +129,29 @@ fun MistakeCounter(
     Text(text = "Mistakes: $mistakesNum/3")
 
     if (mistakesNum == 3) {
-        Dialog(
+        AlertDialog(
             onDismissRequest = {},
+            modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF79747E)),
         ) {
-            Box(
-                modifier = Modifier
-                    .background(Color(0xFF79747E))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(6.dp)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(6.dp)
+                Text(
+                    text = "Game Over",
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "You made 3 mistakes and lost this game.",
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center,
+                )
+                TextButton(
+                    onClick = { sudokuViewModel.onRegenerate() },
+                    modifier = Modifier.padding(8.dp),
                 ) {
-                    Text(
-                        text = "Game Over",
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "You made 3 mistakes and lost this game.",
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                    TextButton(
-                        onClick = { sudokuViewModel.onRegenerate() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Restart")
-                    }
+                    Text("Restart")
                 }
             }
         }
