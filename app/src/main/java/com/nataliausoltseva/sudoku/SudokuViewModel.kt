@@ -29,6 +29,7 @@ class SudokuViewModel: ViewModel() {
     private var mistakesNum: MutableIntState = mutableIntStateOf(0)
     private var selectedLevel: MutableState<String> = mutableStateOf("Easy")
     private var numToRemove: Int = NUM_TO_REMOVE[0]
+    private var hasStarted: MutableState<Boolean> = mutableStateOf(false)
 
     private fun fillGrid() {
         fillDiagonally()
@@ -171,11 +172,8 @@ class SudokuViewModel: ViewModel() {
     }
 
     fun onRegenerate() {
-        grid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
-        usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
-        selectionNumbers = Array(9) { mutableIntStateOf(0) }
-        mistakesNum = mutableIntStateOf(0)
-        fillGrid()
+        hasStarted.value = false
+        updateState()
     }
 
     fun onSelection(digit: Int) {
@@ -192,7 +190,16 @@ class SudokuViewModel: ViewModel() {
     fun onLevelSelect(index: Int) {
         selectedLevel.value = LEVELS[index]
         numToRemove = NUM_TO_REMOVE[index]
-        onRegenerate()
+        fillGrid()
+    }
+
+    fun onStart(index: Int) {
+        hasStarted.value = true
+        grid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+        usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
+        selectionNumbers = Array(9) { mutableIntStateOf(0) }
+        mistakesNum = mutableIntStateOf(0)
+        onLevelSelect(index)
     }
 
     private fun insertDigit() {
@@ -210,6 +217,7 @@ class SudokuViewModel: ViewModel() {
 
     private fun updateState() {
         _uiState.value = GameUIState(
+            hasStarted,
             matrix = grid,
             usersMatrix = usersGrid,
             filledMatrix = filledGrid,
@@ -224,9 +232,5 @@ class SudokuViewModel: ViewModel() {
 
     private fun getRandomNumber(multiplyBy: Int): Int {
         return floor((Math.random() * multiplyBy + 1)).toInt()
-    }
-
-    init {
-        fillGrid()
     }
 }
