@@ -2,8 +2,8 @@
 This game is written in Kotlin using Jetpack Compose.
 
 
-<img src="./screenshots/starting-screen.png" height="500" /> <img src="./screenshots/app-view.png" height="500" /> <img src="./screenshots/selected-cell-view.png" height="500" /> <img src="./screenshots/lost-screen.png" height="500" />
 
+<img src="./screenshots/starting-screen.png" height="500" /> <img src="./screenshots/grid-view.png" height="500" /> <img src="./screenshots/selected-cell-view.png" height="500" /> <img src="./screenshots/lost-screen.png" height="500" />
 
 ## Future improvements:
 - Add undo/erase
