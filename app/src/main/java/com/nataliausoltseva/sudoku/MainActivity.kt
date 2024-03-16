@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -96,7 +97,8 @@ fun WelcomeDialog(
 ) {
     AlertDialog(
         onDismissRequest = {},
-        modifier = Modifier.clip(RoundedCornerShape(12.dp))
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF79747E)),
     ) {
         Column(
@@ -131,7 +133,8 @@ fun MistakeCounter(
     if (mistakesNum == 3) {
         AlertDialog(
             onDismissRequest = {},
-            modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFF79747E)),
         ) {
             Column(
@@ -317,26 +320,29 @@ fun SelectionNumbers(
     sudokuViewModel: SudokuViewModel = viewModel()
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    Row {
-        for (i in 0 until 9) {
-            val label = i + 1
-            val isAvailable = sudokuUIState.selectionNumbers[i].intValue > 0
-            var labelColor = MaterialTheme.colorScheme.secondaryContainer
-            if (isAvailable) {
-                labelColor = MaterialTheme.colorScheme.tertiaryContainer
-            }
-            Surface(
-                color = labelColor,
-                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                onClick = { sudokuViewModel.onSelection(label) },
-                enabled = isAvailable
-            ) {
-                val displayValue = label.toString()
-                Text(
-                    text = displayValue,
-                    Modifier.padding(20.dp)
-                )
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(9),
+        content = {
+            items(9) { i ->
+                val label = i + 1
+                val isAvailable = sudokuUIState.selectionNumbers[i].intValue > 0
+                var labelColor = MaterialTheme.colorScheme.secondaryContainer
+                if (isAvailable) {
+                    labelColor = MaterialTheme.colorScheme.tertiaryContainer
+                }
+                Surface(
+                    color = labelColor,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    onClick = { sudokuViewModel.onSelection(label) },
+                    enabled = isAvailable
+                ) {
+                    val displayValue = label.toString()
+                    Text(
+                        text = displayValue,
+                        Modifier.padding(20.dp)
+                    )
+                }
             }
         }
-    }
+    )
 }
