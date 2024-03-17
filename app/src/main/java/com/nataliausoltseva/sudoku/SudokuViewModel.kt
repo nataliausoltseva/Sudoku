@@ -204,13 +204,13 @@ class SudokuViewModel: ViewModel() {
 
     private fun insertDigit() {
         if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
-            usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
-            selectionNumbers[selectedDigit - 1].intValue -= 1
-            selectedDigit = 0
-
             if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
                 mistakesNum.intValue++
             }
+
+            usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
+            selectionNumbers[selectedDigit - 1].intValue -= 1
+            selectedDigit = 0
         }
         updateState()
     }
