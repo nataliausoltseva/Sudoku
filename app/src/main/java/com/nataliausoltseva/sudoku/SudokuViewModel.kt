@@ -208,8 +208,15 @@ class SudokuViewModel: ViewModel() {
                 mistakesNum.intValue++
             }
 
+            if (usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != 0 &&
+                usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit)
+            {
+                selectionNumbers[usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue - 1].intValue += 1
+            } else {
+                selectionNumbers[selectedDigit - 1].intValue -= 1
+            }
+
             usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
-            selectionNumbers[selectedDigit - 1].intValue -= 1
             selectedDigit = 0
         }
         updateState()

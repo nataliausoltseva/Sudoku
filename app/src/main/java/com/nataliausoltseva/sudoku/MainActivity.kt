@@ -3,17 +3,14 @@ package com.nataliausoltseva.sudoku
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
 import kotlinx.coroutines.delay
@@ -54,7 +50,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SudokuTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     MainApp()
                 }
@@ -99,7 +94,7 @@ fun WelcomeDialog(
         onDismissRequest = {},
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF79747E)),
+            .background(MaterialTheme.colorScheme.onPrimary),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -135,7 +130,7 @@ fun MistakeCounter(
             onDismissRequest = {},
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF79747E)),
+                .background(MaterialTheme.colorScheme.onPrimary),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -203,7 +198,7 @@ fun SudokuGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.border(width = 1.dp, color = Color(0xFFCAC4D0)),
+        modifier = Modifier.border(width = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant),
         content = {
             items(81) {index ->
                 val rowIndex = index / 9
@@ -217,9 +212,17 @@ fun SudokuGrid(
                     currentGridCellValue = grid[selectedCellRow][selectedCellColumn].intValue
                 }
 
-                val backgroundCellColour = if (isCurrentCell) Color(0xFFEFB8C8)
-                else if (gridValue > 0 && currentGridCellValue == gridValue) Color(0xFF492532)
+                val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
+                else if (gridValue > 0 && currentGridCellValue == gridValue) MaterialTheme.colorScheme.tertiaryContainer
                 else MaterialTheme.colorScheme.secondaryContainer;
+
+                val outlineColour = MaterialTheme.colorScheme.inversePrimary
+
+                val columnDividerColour = if (cellRowIndex != 0) MaterialTheme.colorScheme.surface
+                    else MaterialTheme.colorScheme.outline
+
+                val rowDividerColour = if (rowIndex % 3 != 0) MaterialTheme.colorScheme.surface
+                    else MaterialTheme.colorScheme.outline
 
                 Surface(
                     color = backgroundCellColour,
@@ -239,12 +242,10 @@ fun SudokuGrid(
                                 drawLine(
                                     start = Offset(x = 0f, y = canvasHeight),
                                     end = Offset(x = 0f, y = 0f),
-                                    color = Color(0xFF6750A4),
+                                    color = outlineColour,
                                     strokeWidth = 4.dp.toPx()
                                 )
                             } else {
-                                val columnDividerColour = if (cellRowIndex != 0) Color(0xFF79747E)
-                                else Color(0xFFCAC4D0)
                                 drawLine(
                                     start = Offset(x = 0f, y = canvasHeight),
                                     end = Offset(x = 0f, y = 0f),
@@ -262,12 +263,10 @@ fun SudokuGrid(
                                 drawLine(
                                     start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
                                     end = Offset(x = 0f, y = 0f),
-                                    color = Color(0xFF6750A4),
+                                    color = outlineColour,
                                     strokeWidth = 4.dp.toPx()
                                 )
                             } else {
-                                val rowDividerColour = if (rowIndex % 3 != 0) Color(0xFF79747E)
-                                else Color(0xFFCAC4D0)
                                 drawLine(
                                     start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
                                     end = Offset(x = 0f, y = 0f),
@@ -286,9 +285,9 @@ fun SudokuGrid(
                     val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
 
                     val colour =  if (gridValue != 0 && expectedValue != gridValue) Color.Red
-                        else if (isCurrentCell) Color(0xFF492532)
-                        else if (initialGridValue == 0) Color(0xFFEFB8C8)
-                        else Color.White
+                        else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
+                        else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.onSecondaryContainer
 
                     Text(
                         text = displayValue,
@@ -322,24 +321,25 @@ fun SelectionNumbers(
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
+        modifier = Modifier.padding(0.dp, 16.dp, 0.dp, 0.dp),
         content = {
             items(9) { i ->
                 val label = i + 1
                 val isAvailable = sudokuUIState.selectionNumbers[i].intValue > 0
-                var labelColor = MaterialTheme.colorScheme.secondaryContainer
+                var labelColor = MaterialTheme.colorScheme.inversePrimary
                 if (isAvailable) {
-                    labelColor = MaterialTheme.colorScheme.tertiaryContainer
+                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                 }
+
                 Surface(
-                    color = labelColor,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     onClick = { sudokuViewModel.onSelection(label) },
-                    enabled = isAvailable
+                    enabled = isAvailable,
                 ) {
                     val displayValue = label.toString()
                     Text(
                         text = displayValue,
-                        Modifier.padding(20.dp)
+                        Modifier.padding(20.dp),
+                        color = labelColor
                     )
                 }
             }
