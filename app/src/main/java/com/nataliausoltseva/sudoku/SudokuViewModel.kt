@@ -30,6 +30,7 @@ class SudokuViewModel: ViewModel() {
     private var selectedLevel: MutableState<String> = mutableStateOf("Easy")
     private var numToRemove: Int = NUM_TO_REMOVE[0]
     private var hasStarted: MutableState<Boolean> = mutableStateOf(false)
+    private var isPaused: MutableState<Boolean> = mutableStateOf(false)
 
     private fun fillGrid() {
         fillDiagonally()
@@ -202,6 +203,16 @@ class SudokuViewModel: ViewModel() {
         onLevelSelect(index)
     }
 
+    fun onPause() {
+        isPaused.value = true
+        updateState()
+    }
+
+    fun onStart() {
+        isPaused.value = false
+        updateState()
+    }
+
     private fun insertDigit() {
         if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
             if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
@@ -233,7 +244,8 @@ class SudokuViewModel: ViewModel() {
             selectedCellRow,
             selectedCellColumn,
             mistakesNum,
-            selectedLevel
+            selectedLevel,
+            isPaused,
         )
     }
 

@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,13 +27,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +42,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
-import kotlinx.coroutines.delay
-import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,14 +71,17 @@ fun MainApp(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                LevelIndicator()
                 MistakeCounter()
                 Timer()
-                RestartButton()
             }
             SudokuGrid()
             SelectionNumbers()
+            RestartButton()
         }
     }
 }
@@ -88,13 +89,14 @@ fun MainApp(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WelcomeDialog(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel = viewModel(),
+    timerViewModel: TimerViewModel = viewModel(),
 ) {
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = {},
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.onPrimary),
+            .background(MaterialTheme.colorScheme.onPrimary)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -106,13 +108,25 @@ fun WelcomeDialog(
             )
             for (i in LEVELS.indices) {
                 TextButton(
-                    onClick = { sudokuViewModel.onStart(i) },
+                    onClick = {
+                        sudokuViewModel.onStart(i)
+                        timerViewModel.startTimer()
+                    },
                 ) {
                     Text(LEVELS[i])
                 }
             }
         }
     }
+}
+
+@Composable
+fun LevelIndicator(
+    sudokuViewModel: SudokuViewModel = viewModel()
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val currentLevel: MutableState<String> = sudokuUIState.selectedLevel
+    Text(text = currentLevel.value)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,11 +140,11 @@ fun MistakeCounter(
     Text(text = "Mistakes: $mistakesNum/3")
 
     if (mistakesNum == 3) {
-        AlertDialog(
+        BasicAlertDialog(
             onDismissRequest = {},
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.onPrimary),
+                .background(MaterialTheme.colorScheme.onPrimary)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -156,33 +170,66 @@ fun MistakeCounter(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Timer() {
-    val timerConverter = remember { mutableStateOf("") }
-    val loadedCurrentMillis = remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(key1 = timerConverter.value) {
-        delay(1000)
-        timerConverter.value =
-            converting(System.currentTimeMillis() - loadedCurrentMillis.longValue)
+fun Timer(
+    timerViewModel: TimerViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel = viewModel(),
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val isPaused = sudokuUIState.isPaused.value
+    val timerValue by timerViewModel.timer.collectAsState()
+
+    if (isPaused) {
+        BasicAlertDialog(
+            onDismissRequest = {},
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.onPrimary)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(6.dp)
+            ) {
+                Text(
+                    text = "Paused",
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(
+                    onClick = {
+                        sudokuViewModel.onStart()
+                        timerViewModel.startTimer()
+                    },
+                    modifier = Modifier.padding(8.dp),
+                ) {
+                    Text("Continue")
+                }
+            }
+        }
     }
-    Text(
-        text = timerConverter.value,
-        Modifier.padding(10.dp)
-    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = timerViewModel.formatTime(timerValue))
+        Surface(
+            onClick = {
+                if (!isPaused) {
+                    timerViewModel.pauseTimer()
+                    sudokuViewModel.onPause()
+                }
+            }
+        ) {
+            val icon = if (isPaused) Icons.Filled.PlayArrow
+            else Icons.Filled.Pause
+            val iconDescription = if (isPaused) "Play icon" else "Pause icon"
+            Icon(
+                icon,
+                contentDescription = iconDescription
+            )
+        }
+    }
 }
-
-fun converting(millis: Long): String =
-    String.format(
-        "%02d:%02d:%02d",
-        TimeUnit.MILLISECONDS.toHours(millis),
-        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(
-            TimeUnit.MILLISECONDS.toHours(millis)
-        ),
-        TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(
-            TimeUnit.MILLISECONDS.toMinutes(millis)
-        )
-    )
-
 
 @Composable
 fun SudokuGrid(
@@ -194,6 +241,7 @@ fun SudokuGrid(
     val initialGrid: Array<Array<MutableIntState>> = sudokuUIState.matrix
     val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
     val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
+    val isPaused = sudokuUIState.isPaused.value;
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -277,7 +325,7 @@ fun SudokuGrid(
                         }
                 ) {
                     var displayValue = ""
-                    if (gridValue != 0) {
+                    if (gridValue != 0 && !isPaused) {
                         displayValue = gridValue.toString()
                     }
 
@@ -285,9 +333,9 @@ fun SudokuGrid(
                     val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
 
                     val colour =  if (gridValue != 0 && expectedValue != gridValue) Color.Red
-                        else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
-                        else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.onSecondaryContainer
+                    else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
+                    else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
+                    else MaterialTheme.colorScheme.onSecondaryContainer
 
                     Text(
                         text = displayValue,
@@ -302,10 +350,14 @@ fun SudokuGrid(
 
 @Composable
 fun RestartButton(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel = viewModel(),
+    timerViewModel: TimerViewModel = viewModel(),
 ) {
     Button(
-        onClick = { sudokuViewModel.onRegenerate() },
+        onClick = {
+            sudokuViewModel.onRegenerate()
+            timerViewModel.stopTimer()
+        },
     ) {
         Icon (
             Icons.Rounded.Refresh,

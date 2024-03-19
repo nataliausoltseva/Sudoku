@@ -16,6 +16,7 @@ data class GameUIState(
     val selectedCellColumn: Int? = null,
     val mistakesNum: MutableIntState = mutableIntStateOf(0),
     val selectedLevel: MutableState<String> = mutableStateOf("Easy"),
+    val isPaused: MutableState<Boolean> = mutableStateOf(false)
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -33,6 +34,7 @@ data class GameUIState(
         if (selectedCellColumn != other.selectedCellColumn) return false
         if (mistakesNum != other.mistakesNum) return false
         if (selectedLevel != other.selectedLevel) return false
+        if (isPaused != other.isPaused) return false
 
         return true
     }
@@ -48,6 +50,7 @@ data class GameUIState(
         result = 31 * result + (selectedCellColumn ?: 0)
         result = 31 * result + mistakesNum.hashCode()
         result = 31 * result + selectedLevel.hashCode()
+        result = 31 * result + isPaused.hashCode()
         return result
     }
 }
