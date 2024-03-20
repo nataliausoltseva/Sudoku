@@ -42,6 +42,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.compose.OnParticleSystemUpdateListener
+import nl.dionsegijn.konfetti.core.PartySystem
+import androidx.compose.runtime.livedata.observeAsState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,27 +66,62 @@ fun MainApp(
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val hasStarted = sudokuUIState.hasStarted.value
+    val stepsToGo = sudokuUIState.stepsToGo.value
 
     if (!hasStarted) {
         WelcomeDialog()
     } else {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        if (stepsToGo == 0) {
+            EndScreen()
+            KonfettiUI()
+        } else {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LevelIndicator()
-                MistakeCounter()
-                Timer()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    LevelIndicator()
+                    MistakeCounter()
+                    Timer()
+                }
+                if (stepsToGo > 0) {
+                    SudokuGrid()
+                    SelectionNumbers()
+                    RestartButton()
+                }
             }
-            SudokuGrid()
-            SelectionNumbers()
-            RestartButton()
         }
+    }
+}
+
+@Composable
+fun KonfettiUI(viewModel: KonfettiViewModel = KonfettiViewModel()) {
+    val state: KonfettiViewModel.State by viewModel.state.observeAsState(
+        KonfettiViewModel.State.Idle,
+    )
+
+    viewModel.rain()
+
+    when (val newState = state) {
+        KonfettiViewModel.State.Idle -> {}
+        is KonfettiViewModel.State.Started ->
+            KonfettiView(
+                modifier = Modifier.fillMaxSize(),
+                parties = newState.party,
+                updateListener =
+                object : OnParticleSystemUpdateListener {
+                    override fun onParticleSystemEnded(
+                        system: PartySystem,
+                        activeSystems: Int,
+                    ) {
+                        if (activeSystems == 0) viewModel.ended()
+                    }
+                },
+            )
     }
 }
 
@@ -116,6 +155,41 @@ fun WelcomeDialog(
                     Text(LEVELS[i])
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun EndScreen(
+    sudokuViewModel: SudokuViewModel = viewModel(),
+    timerViewModel: TimerViewModel = viewModel(),
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val timer = sudokuUIState.timer.value
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "You Won!",
+            fontWeight = FontWeight.Bold
+        )
+
+        Row {
+            Text(text = "Difficulty: ")
+            LevelIndicator()
+        }
+
+        Row {
+            Text(text = "Time: ")
+            Text(text = timerViewModel.formatTime(timer))
+        }
+
+        TextButton(
+            onClick = { sudokuViewModel.onRegenerate() },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text("New Game")
         }
     }
 }
@@ -179,6 +253,12 @@ fun Timer(
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val isPaused = sudokuUIState.isPaused.value
     val timerValue by timerViewModel.timer.collectAsState()
+    val stepsToGo = sudokuUIState.stepsToGo.value
+
+    if (stepsToGo == 0) {
+        timerViewModel.pauseTimer()
+        sudokuViewModel.setTimer(timerValue)
+    }
 
     if (isPaused) {
         BasicAlertDialog(

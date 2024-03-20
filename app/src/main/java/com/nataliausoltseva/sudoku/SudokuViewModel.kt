@@ -3,6 +3,7 @@ package com.nataliausoltseva.sudoku
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,8 @@ class SudokuViewModel: ViewModel() {
     private var numToRemove: Int = NUM_TO_REMOVE[0]
     private var hasStarted: MutableState<Boolean> = mutableStateOf(false)
     private var isPaused: MutableState<Boolean> = mutableStateOf(false)
+    private var stepsToGo: MutableState<Int> = mutableIntStateOf(0)
+    private var timer: MutableState<Long> = mutableLongStateOf(0)
 
     private fun fillGrid() {
         fillDiagonally()
@@ -157,6 +160,7 @@ class SudokuViewModel: ViewModel() {
                     selectionNumbers[currentValue - 1].intValue += 1
                     grid[i][j].intValue = 0
                     usersGrid[i][j].intValue = 0
+                    stepsToGo.value++
                 }
             }
         }
@@ -213,16 +217,27 @@ class SudokuViewModel: ViewModel() {
         updateState()
     }
 
+    fun setTimer(timeValue: Long) {
+        timer.value = timeValue
+        updateState()
+    }
+
     private fun insertDigit() {
         if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
             if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
                 mistakesNum.intValue++
+            } else {
+                stepsToGo.value--
             }
 
             if (usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != 0 &&
                 usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit)
             {
                 selectionNumbers[usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue - 1].intValue += 1
+
+                if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
+                    stepsToGo.value++
+                }
             } else {
                 selectionNumbers[selectedDigit - 1].intValue -= 1
             }
@@ -246,6 +261,8 @@ class SudokuViewModel: ViewModel() {
             mistakesNum,
             selectedLevel,
             isPaused,
+            stepsToGo,
+            timer,
         )
     }
 

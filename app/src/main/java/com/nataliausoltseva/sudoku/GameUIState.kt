@@ -3,6 +3,7 @@ package com.nataliausoltseva.sudoku
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 
 data class GameUIState(
@@ -16,7 +17,9 @@ data class GameUIState(
     val selectedCellColumn: Int? = null,
     val mistakesNum: MutableIntState = mutableIntStateOf(0),
     val selectedLevel: MutableState<String> = mutableStateOf("Easy"),
-    val isPaused: MutableState<Boolean> = mutableStateOf(false)
+    val isPaused: MutableState<Boolean> = mutableStateOf(false),
+    val stepsToGo: MutableState<Int> = mutableIntStateOf(0),
+    val timer: MutableState<Long> = mutableLongStateOf(0)
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -35,6 +38,8 @@ data class GameUIState(
         if (mistakesNum != other.mistakesNum) return false
         if (selectedLevel != other.selectedLevel) return false
         if (isPaused != other.isPaused) return false
+        if (stepsToGo != other.stepsToGo) return false
+        if (timer != other.timer) return false
 
         return true
     }
@@ -51,6 +56,8 @@ data class GameUIState(
         result = 31 * result + mistakesNum.hashCode()
         result = 31 * result + selectedLevel.hashCode()
         result = 31 * result + isPaused.hashCode()
+        result = 31 * result + stepsToGo.hashCode()
+        result = 31 * result + timer.hashCode()
         return result
     }
 }
