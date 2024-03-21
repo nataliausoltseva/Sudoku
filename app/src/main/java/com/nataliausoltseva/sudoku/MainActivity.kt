@@ -149,6 +149,7 @@ fun WelcomeDialog(
                 TextButton(
                     onClick = {
                         sudokuViewModel.onStart(i)
+                        timerViewModel.stopTimer()
                         timerViewModel.startTimer()
                     },
                 ) {
@@ -253,12 +254,7 @@ fun Timer(
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val isPaused = sudokuUIState.isPaused.value
     val timerValue by timerViewModel.timer.collectAsState()
-    val stepsToGo = sudokuUIState.stepsToGo.value
-
-    if (stepsToGo == 0) {
-        timerViewModel.pauseTimer()
-        sudokuViewModel.setTimer(timerValue)
-    }
+    sudokuViewModel.setTimer(timerValue)
 
     if (isPaused) {
         BasicAlertDialog(

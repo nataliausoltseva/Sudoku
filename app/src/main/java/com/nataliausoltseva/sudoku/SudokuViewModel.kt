@@ -178,6 +178,7 @@ class SudokuViewModel: ViewModel() {
 
     fun onRegenerate() {
         hasStarted.value = false
+        stepsToGo.value = 0
         updateState()
     }
 
