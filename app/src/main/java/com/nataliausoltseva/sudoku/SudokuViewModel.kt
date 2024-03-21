@@ -229,18 +229,18 @@ class SudokuViewModel: ViewModel() {
             } else {
                 stepsToGo.value--
             }
-
-            if (usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != 0 &&
-                usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit)
+            val isEmptyCell = usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != 0
+            val isNotCurrentValue = usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit
+            if (isEmptyCell && isNotCurrentValue)
             {
-                selectionNumbers[usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue - 1].intValue += 1
+                selectionNumbers[usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue - 1].intValue++
 
                 if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
                     stepsToGo.value++
                 }
-            } else {
-                selectionNumbers[selectedDigit - 1].intValue -= 1
             }
+
+            selectionNumbers[selectedDigit - 1].intValue--
 
             usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
             selectedDigit = 0
