@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,12 +18,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,56 +50,81 @@ import nl.dionsegijn.konfetti.compose.KonfettiView
 import nl.dionsegijn.konfetti.compose.OnParticleSystemUpdateListener
 import nl.dionsegijn.konfetti.core.PartySystem
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SudokuTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    MainApp()
-                }
-            }
+            MainApp()
         }
     }
 }
 
 @Composable
 fun MainApp(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val hasStarted = sudokuUIState.hasStarted.value
     val stepsToGo = sudokuUIState.stepsToGo.value
+    val showSettings = remember { mutableStateOf(false) }
+    val hasCounter by settingsViewModel.hasMistakeCounter.collectAsState()
+    val theme by settingsViewModel.theme.collectAsState()
 
-    if (!hasStarted) {
-        WelcomeDialog()
-    } else {
-        if (stepsToGo == 0) {
-            EndScreen()
-            KonfettiUI()
-        } else {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    LevelIndicator()
-                    MistakeCounter()
-                    Timer()
-                }
-                if (stepsToGo > 0) {
-                    SudokuGrid()
-                    SelectionNumbers()
-                    RestartButton()
+    SudokuTheme(
+        darkTheme = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            if (!hasStarted) {
+                WelcomeDialog()
+            } else {
+                if (stepsToGo == 0) {
+                    EndScreen()
+                    KonfettiUI()
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                    ) {
+                        Surface(
+                            onClick = { showSettings.value = !showSettings.value },
+                            modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings icon"
+                            )
+                        }
+                        Settings(showSettings.value, onCancel = { showSettings.value = false })
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                LevelIndicator()
+                                if (hasCounter) {
+                                    MistakeCounter()
+                                }
+                                Timer()
+                            }
+                            if (stepsToGo > 0) {
+                                SudokuGrid()
+                                SelectionNumbers()
+                                RestartButton()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -191,6 +220,81 @@ fun EndScreen(
             modifier = Modifier.padding(8.dp)
         ) {
             Text("New Game")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Settings(
+    showSettings: Boolean,
+    onCancel: () -> Unit,
+    settingsViewModel: SettingsViewModel = viewModel(),
+) {
+    if (showSettings) {
+        val showMistakes = remember { mutableStateOf(settingsViewModel.showMistakes.value) }
+        val hasMistakesCount = remember { mutableStateOf(settingsViewModel.hasMistakeCounter.value) }
+        val theme = remember { mutableStateOf(settingsViewModel.theme.value) }
+
+        BasicAlertDialog(
+            onDismissRequest = {},
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.onPrimary)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Show mistakes")
+                    Checkbox(checked = showMistakes.value, onCheckedChange = { isChecked -> showMistakes.value = isChecked })
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Count mistakes")
+                    Checkbox(checked = hasMistakesCount.value, onCheckedChange = { isChecked -> hasMistakesCount.value = isChecked})
+                }
+                Row(
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(text = "Theme:")
+                    Column {
+                        for (i in THEMES.indices) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = THEMES[i] == theme.value,
+                                    onClick = { theme.value = THEMES[i]}
+                                )
+                                Text(text = THEMES[i])
+                            }
+                        }
+                    }
+                }
+
+                Row {
+                    TextButton(
+                        onClick = { onCancel() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            settingsViewModel.onSave(showMistakes.value, hasMistakesCount.value, theme.value)
+                            onCancel()
+                        },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Save")
+                    }
+                }
+            }
         }
     }
 }
@@ -309,7 +413,8 @@ fun Timer(
 
 @Composable
 fun SudokuGrid(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val grid: Array<Array<MutableIntState>> = sudokuUIState.usersMatrix
@@ -318,6 +423,8 @@ fun SudokuGrid(
     val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
     val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
     val isPaused = sudokuUIState.isPaused.value;
+
+    val showMistakes by settingsViewModel.showMistakes.collectAsState()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -408,7 +515,7 @@ fun SudokuGrid(
                     val expectedValue = filledGrid[rowIndex][columnIndex].intValue
                     val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
 
-                    val colour =  if (gridValue != 0 && expectedValue != gridValue) Color.Red
+                    val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
                     else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
                     else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
                     else MaterialTheme.colorScheme.onSecondaryContainer
