@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -116,7 +118,12 @@ fun MainApp(
                             if (stepsToGo > 0) {
                                 SudokuGrid()
                                 SelectionNumbers()
-                                RestartButton()
+                                Row (
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RestartButton()
+                                    Hints()
+                                }
                             }
                         }
                     }
@@ -345,6 +352,38 @@ fun MistakeCounter(
                     Text("Restart")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun Hints(
+    sudokuViewModel: SudokuViewModel = viewModel(),
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val hintNum: Int = sudokuUIState.hintNum.intValue
+    Surface {
+        Button(
+            onClick = { sudokuViewModel.useHint() },
+            modifier = Modifier.padding(8.dp),
+            enabled = hintNum > 0,
+        ) {
+            Icon (
+                Icons.Rounded.Lightbulb,
+                contentDescription = "Hint icon"
+            )
+        }
+        Surface(
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .absoluteOffset(55.dp, 0.dp)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            Text(
+                text = hintNum.toString(),
+                modifier = Modifier
+                    .padding(10.dp, 3.dp, 10.dp, 3.dp)
+            )
         }
     }
 }
