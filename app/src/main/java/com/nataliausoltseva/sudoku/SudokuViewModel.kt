@@ -182,6 +182,8 @@ class SudokuViewModel: ViewModel() {
         hasStarted.value = false
         stepsToGo.value = 0
         hintNum.intValue = 3
+        unlockedCell[0].value = null
+        unlockedCell[1].value = null
         updateState()
     }
 
