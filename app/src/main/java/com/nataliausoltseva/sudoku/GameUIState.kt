@@ -19,7 +19,9 @@ data class GameUIState(
     val selectedLevel: MutableState<String> = mutableStateOf("Easy"),
     val isPaused: MutableState<Boolean> = mutableStateOf(false),
     val stepsToGo: MutableState<Int> = mutableIntStateOf(0),
-    val timer: MutableState<Long> = mutableLongStateOf(0)
+    val timer: MutableState<Long> = mutableLongStateOf(0),
+    val hintNum: MutableIntState = mutableIntStateOf(3),
+    val unlockedCell: Array<MutableState<Int?>> = Array(2) { mutableStateOf(null) }
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

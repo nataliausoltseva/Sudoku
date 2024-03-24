@@ -34,6 +34,8 @@ class SudokuViewModel: ViewModel() {
     private var isPaused: MutableState<Boolean> = mutableStateOf(false)
     private var stepsToGo: MutableState<Int> = mutableIntStateOf(0)
     private var timer: MutableState<Long> = mutableLongStateOf(0)
+    private var hintNum: MutableIntState = mutableIntStateOf(3)
+    private var unlockedCell: Array<MutableState<Int?>> = Array(2) { mutableStateOf(null) }
 
     private fun fillGrid() {
         fillDiagonally()
@@ -179,6 +181,9 @@ class SudokuViewModel: ViewModel() {
     fun onRegenerate() {
         hasStarted.value = false
         stepsToGo.value = 0
+        hintNum.intValue = 3
+        unlockedCell[0].value = null
+        unlockedCell[1].value = null
         updateState()
     }
 
@@ -223,6 +228,26 @@ class SudokuViewModel: ViewModel() {
         updateState()
     }
 
+    fun useHint() {
+        hintNum.intValue--
+        unlockACell()
+        updateState()
+    }
+
+    private fun unlockACell() {
+        val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
+        val i = cellId / GRID_SIZE
+        val y = cellId % GRID_SIZE
+        if (grid[i][y].intValue == 0 && usersGrid[i][y].intValue == 0) {
+            grid[i][y].intValue = filledGrid[i][y].intValue
+            usersGrid[i][y].intValue = filledGrid[i][y].intValue
+            unlockedCell[0].value = i
+            unlockedCell[1].value = y
+        } else {
+            unlockACell()
+        }
+    }
+
     private fun insertDigit() {
         if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
             if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
@@ -250,6 +275,7 @@ class SudokuViewModel: ViewModel() {
     }
 
     private fun updateState() {
+        println("hintNum: " +  hintNum)
         _uiState.value = GameUIState(
             hasStarted,
             matrix = grid,
@@ -264,6 +290,8 @@ class SudokuViewModel: ViewModel() {
             isPaused,
             stepsToGo,
             timer,
+            hintNum,
+            unlockedCell,
         )
     }
 
