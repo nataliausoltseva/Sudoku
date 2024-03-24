@@ -230,6 +230,7 @@ class SudokuViewModel: ViewModel() {
 
     fun useHint() {
         hintNum.intValue--
+        stepsToGo.value--
         unlockACell()
         updateState()
     }
@@ -239,10 +240,12 @@ class SudokuViewModel: ViewModel() {
         val i = cellId / GRID_SIZE
         val y = cellId % GRID_SIZE
         if (grid[i][y].intValue == 0 && usersGrid[i][y].intValue == 0) {
-            grid[i][y].intValue = filledGrid[i][y].intValue
-            usersGrid[i][y].intValue = filledGrid[i][y].intValue
+            val digitToInsert = filledGrid[i][y].intValue
+            grid[i][y].intValue = digitToInsert
+            usersGrid[i][y].intValue = digitToInsert
             unlockedCell[0].value = i
             unlockedCell[1].value = y
+            selectionNumbers[digitToInsert - 1].intValue--
         } else {
             unlockACell()
         }
