@@ -3,6 +3,8 @@ package com.nataliausoltseva.sudoku
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -33,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -54,6 +57,8 @@ import nl.dionsegijn.konfetti.core.PartySystem
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -462,6 +467,7 @@ fun SudokuGrid(
     val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
     val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
     val isPaused = sudokuUIState.isPaused.value;
+    val unlockedCell = sudokuUIState.unlockedCell;
 
     val showMistakes by settingsViewModel.showMistakes.collectAsState()
 
@@ -559,9 +565,24 @@ fun SudokuGrid(
                     else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
                     else MaterialTheme.colorScheme.onSecondaryContainer
 
+                    val scale = remember { Animatable(1f) }
+                    val isUnlockedCell = unlockedCell[0].value == rowIndex && unlockedCell[1].value == columnIndex
+                    if (isUnlockedCell) {
+                        LaunchedEffect(true) {
+                            scale.animateTo(1f, animationSpec = tween(0))
+                            scale.animateTo(3f, animationSpec = tween(350))
+                            scale.animateTo(1f, animationSpec = tween(350))
+                        }
+                    }
+
                     Text(
                         text = displayValue,
-                        Modifier.padding(20.dp),
+                        Modifier.padding(20.dp)
+                            .graphicsLayer {
+                                scaleX = scale.value
+                                scaleY = scale.value
+                                transformOrigin = TransformOrigin.Center
+                            },
                         color = colour
                     )
                 }
