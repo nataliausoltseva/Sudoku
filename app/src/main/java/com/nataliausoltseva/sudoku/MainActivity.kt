@@ -26,12 +26,12 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,6 +80,7 @@ fun MainApp(
     val showSettings = remember { mutableStateOf(false) }
     val hasCounter by settingsViewModel.hasMistakeCounter.collectAsState()
     val theme by settingsViewModel.theme.collectAsState()
+    val hasTimer by settingsViewModel.hasTimer.collectAsState()
 
     SudokuTheme(
         darkTheme = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
@@ -118,7 +119,9 @@ fun MainApp(
                                 if (hasCounter) {
                                     MistakeCounter()
                                 }
-                                Timer()
+                                if (hasTimer) {
+                                    Timer()
+                                }
                             }
                             if (stepsToGo > 0) {
                                 SudokuGrid()
@@ -205,9 +208,12 @@ fun WelcomeDialog(
 fun EndScreen(
     sudokuViewModel: SudokuViewModel = viewModel(),
     timerViewModel: TimerViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val timer = sudokuUIState.timer.value
+    val hasTimer by settingsViewModel.hasTimer.collectAsState()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -222,9 +228,11 @@ fun EndScreen(
             LevelIndicator()
         }
 
-        Row {
-            Text(text = "Time: ")
-            Text(text = timerViewModel.formatTime(timer))
+        if (hasTimer) {
+            Row {
+                Text(text = "Time: ")
+                Text(text = timerViewModel.formatTime(timer))
+            }
         }
 
         TextButton(
@@ -242,11 +250,15 @@ fun Settings(
     showSettings: Boolean,
     onCancel: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel(),
-) {
+    timerViewModel: TimerViewModel = viewModel(),
+    ) {
     if (showSettings) {
         val showMistakes = remember { mutableStateOf(settingsViewModel.showMistakes.value) }
         val hasMistakesCount = remember { mutableStateOf(settingsViewModel.hasMistakeCounter.value) }
         val theme = remember { mutableStateOf(settingsViewModel.theme.value) }
+        val hasHighlightSameNumbers = remember { mutableStateOf(settingsViewModel.hasHighlightSameNumbers.value) }
+        val hasRowHighlight = remember { mutableStateOf(settingsViewModel.hasRowHighlight.value) }
+        val hasTimer = remember { mutableStateOf(settingsViewModel.hasTimer.value) }
 
         BasicAlertDialog(
             onDismissRequest = {},
@@ -254,41 +266,64 @@ fun Settings(
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.onPrimary)
         ) {
-            Column(
+            Column (
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(6.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                Column (
+                    horizontalAlignment = Alignment.Start,
                 ) {
-                    Text(text = "Show mistakes")
-                    Checkbox(checked = showMistakes.value, onCheckedChange = { isChecked -> showMistakes.value = isChecked })
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Count mistakes")
-                    Checkbox(checked = hasMistakesCount.value, onCheckedChange = { isChecked -> hasMistakesCount.value = isChecked})
-                }
-                Row(
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(text = "Theme:")
-                    Column {
-                        for (i in THEMES.indices) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = THEMES[i] == theme.value,
-                                    onClick = { theme.value = THEMES[i]}
-                                )
-                                Text(text = THEMES[i])
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Show mistakes")
+                        Switch(checked = showMistakes.value, onCheckedChange = { isChecked -> showMistakes.value = isChecked })
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Count mistakes")
+                        Switch(checked = hasMistakesCount.value, onCheckedChange = { isChecked -> hasMistakesCount.value = isChecked})
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Highlight Same Numbers")
+                        Switch(checked = hasHighlightSameNumbers.value, onCheckedChange = { isChecked -> hasHighlightSameNumbers.value = isChecked})
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Highlight Rows")
+                        Switch(checked = hasRowHighlight.value, onCheckedChange = { isChecked -> hasRowHighlight.value = isChecked})
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Include Timer")
+                        Switch(checked = hasTimer.value, onCheckedChange = { isChecked -> hasTimer.value = isChecked})
+                    }
+                    Row(
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(text = "Theme:")
+                        Column {
+                            for (i in THEMES.indices) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = THEMES[i] == theme.value,
+                                        onClick = { theme.value = THEMES[i]}
+                                    )
+                                    Text(text = THEMES[i])
+                                }
                             }
                         }
                     }
-                }
 
+                }
                 Row {
                     TextButton(
                         onClick = { onCancel() },
@@ -298,8 +333,21 @@ fun Settings(
                     }
                     TextButton(
                         onClick = {
-                            settingsViewModel.onSave(showMistakes.value, hasMistakesCount.value, theme.value)
+                            settingsViewModel.onSave(
+                                showMistakes.value,
+                                hasMistakesCount.value,
+                                theme.value,
+                                hasHighlightSameNumbers.value,
+                                hasRowHighlight.value,
+                                hasTimer.value,
+                            )
                             onCancel()
+
+                            if (!hasTimer.value) {
+                                timerViewModel.pauseTimer()
+                            } else {
+                                timerViewModel.startTimer()
+                            }
                         },
                         modifier = Modifier.padding(8.dp),
                     ) {
@@ -397,7 +445,7 @@ fun Hints(
 @Composable
 fun Timer(
     timerViewModel: TimerViewModel = viewModel(),
-    sudokuViewModel: SudokuViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel = viewModel()
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val isPaused = sudokuUIState.isPaused.value
@@ -470,6 +518,8 @@ fun SudokuGrid(
     val unlockedCell = sudokuUIState.unlockedCell;
 
     val showMistakes by settingsViewModel.showMistakes.collectAsState()
+    val hasRowHighlight by settingsViewModel.hasRowHighlight.collectAsState()
+    val hasHighlightSameNumbers by settingsViewModel.hasHighlightSameNumbers.collectAsState()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -489,8 +539,8 @@ fun SudokuGrid(
                 }
 
                 val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
-                else if (gridValue > 0 && currentGridCellValue == gridValue) MaterialTheme.colorScheme.tertiaryContainer
-                else MaterialTheme.colorScheme.secondaryContainer;
+                    else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
+                    else MaterialTheme.colorScheme.secondaryContainer;
 
                 val outlineColour = MaterialTheme.colorScheme.inversePrimary
 
@@ -514,7 +564,7 @@ fun SudokuGrid(
                             val ignoreVerticalOutline = selectedCellColumn == null ||
                                     isCurrentCell ||
                                     (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
-                            if (hasVerticalOutline && !ignoreVerticalOutline) {
+                            if (hasVerticalOutline && !ignoreVerticalOutline && hasRowHighlight) {
                                 drawLine(
                                     start = Offset(x = 0f, y = canvasHeight),
                                     end = Offset(x = 0f, y = 0f),
@@ -535,7 +585,7 @@ fun SudokuGrid(
                             val ignoreHorizontalOutline = isCurrentCell ||
                                     selectedCellRow == null ||
                                     (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
-                            if (hasHorizontalOutline && !ignoreHorizontalOutline) {
+                            if (hasHorizontalOutline && !ignoreHorizontalOutline && hasRowHighlight) {
                                 drawLine(
                                     start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
                                     end = Offset(x = 0f, y = 0f),
@@ -577,7 +627,8 @@ fun SudokuGrid(
 
                     Text(
                         text = displayValue,
-                        Modifier.padding(20.dp)
+                        Modifier
+                            .padding(20.dp)
                             .graphicsLayer {
                                 scaleX = scale.value
                                 scaleY = scale.value
