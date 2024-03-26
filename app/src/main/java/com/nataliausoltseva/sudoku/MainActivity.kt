@@ -26,10 +26,14 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -275,49 +279,92 @@ fun Settings(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
                         Text(text = "Show mistakes")
                         Switch(checked = showMistakes.value, onCheckedChange = { isChecked -> showMistakes.value = isChecked })
                     }
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
                         Text(text = "Count mistakes")
                         Switch(checked = hasMistakesCount.value, onCheckedChange = { isChecked -> hasMistakesCount.value = isChecked})
                     }
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
                         Text(text = "Highlight Same Numbers")
                         Switch(checked = hasHighlightSameNumbers.value, onCheckedChange = { isChecked -> hasHighlightSameNumbers.value = isChecked})
                     }
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
                         Text(text = "Highlight Rows")
                         Switch(checked = hasRowHighlight.value, onCheckedChange = { isChecked -> hasRowHighlight.value = isChecked})
                     }
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
                         Text(text = "Include Timer")
                         Switch(checked = hasTimer.value, onCheckedChange = { isChecked -> hasTimer.value = isChecked})
                     }
                     Row(
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
                     ) {
-                        Text(text = "Theme:")
-                        Column {
-                            for (i in THEMES.indices) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = THEMES[i] == theme.value,
-                                        onClick = { theme.value = THEMES[i]}
+                        val isExpanded = remember{ mutableStateOf(false) }
+                        ExposedDropdownMenuBox(
+                            expanded = isExpanded.value,
+                            onExpandedChange = { isExpanded.value = !isExpanded.value }
+                        ) {
+                            OutlinedTextField(
+                                readOnly = true,
+                                value = theme.value,
+                                onValueChange = {},
+                                label = { Text(text = "Theme") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded.value)
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(),
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth()
+                            )
+
+                            ExposedDropdownMenu(expanded = isExpanded.value, onDismissRequest = { isExpanded.value = false }) {
+                                for (i in THEMES.indices) {
+                                    DropdownMenuItem(
+                                        text = { 
+                                            Text(text = THEMES[i])
+                                        },
+                                        onClick = {
+                                            theme.value = THEMES[i]
+                                            isExpanded.value = false
+                                        },
+                                        
                                     )
-                                    Text(text = THEMES[i])
                                 }
                             }
                         }
