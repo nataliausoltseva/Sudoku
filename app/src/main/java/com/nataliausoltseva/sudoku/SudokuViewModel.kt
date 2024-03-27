@@ -25,8 +25,8 @@ class SudokuViewModel: ViewModel() {
     private var usersGrid = Array(GRID_SIZE) { Array(GRID_SIZE) { mutableIntStateOf(0) } }
     private var selectionNumbers: Array<MutableIntState> = Array(9) { mutableIntStateOf(0) }
     private var selectedDigit: Int = 0
-    private var selectedCellRow: Int? = null
-    private var selectedCellColumn: Int? = null
+    private var selectedCellRow: Int = 0
+    private var selectedCellColumn: Int = 0
     private var mistakesNum: MutableIntState = mutableIntStateOf(0)
     private var selectedLevel: MutableState<String> = mutableStateOf("Easy")
     private var numToRemove: Int = NUM_TO_REMOVE[0]
@@ -195,10 +195,9 @@ class SudokuViewModel: ViewModel() {
     fun onSelectCell(row: Int, column: Int) {
         selectedCellRow = row
         selectedCellColumn = column
-        insertDigit()
     }
 
-    fun onLevelSelect(index: Int) {
+    private fun onLevelSelect(index: Int) {
         selectedLevel.value = LEVELS[index]
         numToRemove = NUM_TO_REMOVE[index]
         fillGrid()
@@ -235,6 +234,15 @@ class SudokuViewModel: ViewModel() {
         updateState()
     }
 
+    fun onErase() {
+        val digitNumber = usersGrid[selectedCellRow][selectedCellColumn].intValue
+        selectionNumbers[digitNumber - 1].intValue--
+        usersGrid[selectedCellRow][selectedCellColumn].intValue = 0
+        selectedDigit = 0
+        stepsToGo.value++
+        updateState()
+    }
+
     private fun unlockACell() {
         val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
         val i = cellId / GRID_SIZE
@@ -252,26 +260,26 @@ class SudokuViewModel: ViewModel() {
     }
 
     private fun insertDigit() {
-        if (selectedDigit != 0  && selectedCellRow != null && selectedCellColumn != null && grid[selectedCellRow!!][selectedCellColumn!!].intValue == 0) {
-            if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
+        if (selectedDigit != 0 && grid[selectedCellRow][selectedCellColumn].intValue == 0) {
+            if (filledGrid[selectedCellRow][selectedCellColumn].intValue != selectedDigit) {
                 mistakesNum.intValue++
             } else {
                 stepsToGo.value--
             }
-            val isEmptyCell = usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != 0
-            val isNotCurrentValue = usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit
+            val isEmptyCell = usersGrid[selectedCellRow][selectedCellColumn].intValue != 0
+            val isNotCurrentValue = usersGrid[selectedCellRow][selectedCellColumn].intValue != selectedDigit
             if (isEmptyCell && isNotCurrentValue)
             {
-                selectionNumbers[usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue - 1].intValue++
+                selectionNumbers[usersGrid[selectedCellRow][selectedCellColumn].intValue - 1].intValue++
 
-                if (filledGrid[selectedCellRow!!][selectedCellColumn!!].intValue != selectedDigit) {
+                if (filledGrid[selectedCellRow][selectedCellColumn].intValue != selectedDigit) {
                     stepsToGo.value++
                 }
             }
 
             selectionNumbers[selectedDigit - 1].intValue--
 
-            usersGrid[selectedCellRow!!][selectedCellColumn!!].intValue = selectedDigit
+            usersGrid[selectedCellRow][selectedCellColumn].intValue = selectedDigit
             selectedDigit = 0
         }
         updateState()
