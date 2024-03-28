@@ -19,9 +19,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
@@ -139,6 +141,7 @@ fun MainApp(
                                 Row (
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    UndoButton()
                                     Erase()
                                     Hints()
                                 }
@@ -723,8 +726,7 @@ fun Erase(
     Button(
         onClick = { sudokuViewModel.onErase() },
         modifier = Modifier.padding(8.dp),
-
-        ) {
+    ) {
         Icon (
             Icons.Rounded.Close,
             contentDescription = "Icon to clear a cell"
@@ -763,4 +765,22 @@ fun SelectionNumbers(
             }
         }
     )
+}
+
+@Composable
+fun UndoButton(
+    sudokuViewModel: SudokuViewModel = viewModel()
+) {
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val isEnabled = sudokuUIState.steps.size > 0
+    Button(
+        onClick = { sudokuViewModel.onUndo() },
+        enabled = isEnabled,
+        modifier = Modifier.padding(8.dp),
+        ) {
+        Icon (
+            Icons.AutoMirrored.Filled.Undo,
+            contentDescription = "Undo icon"
+        )
+    }
 }
