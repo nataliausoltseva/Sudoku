@@ -38,6 +38,8 @@ class SudokuViewModel: ViewModel() {
     private var unlockedCell: Array<MutableState<Int?>> = Array(2) { mutableStateOf(null) }
     private var steps: MutableList<Step> = mutableListOf()
 
+    var isRestartClicked: MutableState<Boolean> = mutableStateOf(false)
+
     private fun fillGrid() {
         fillDiagonally()
         fillRemaining(0, GRID_SIZE_SQUARE_ROOT)

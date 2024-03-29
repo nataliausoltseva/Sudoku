@@ -20,11 +20,14 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
@@ -93,7 +96,7 @@ fun MainApp(
         darkTheme = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (!hasStarted) {
+            if (!hasStarted || sudokuViewModel.isRestartClicked.value) {
                 WelcomeDialog()
             } else {
                 if (stepsToGo == 0) {
@@ -189,15 +192,35 @@ fun WelcomeDialog(
     timerViewModel: TimerViewModel = viewModel(),
 ) {
     BasicAlertDialog(
-        onDismissRequest = {},
+        onDismissRequest = {
+            sudokuViewModel.isRestartClicked.value = false
+        },
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.onPrimary)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(6.dp)
+            modifier = Modifier.padding(6.dp, 6.dp, 6.dp, 12.dp)
         ) {
+            if (sudokuViewModel.isRestartClicked.value) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Surface(
+                        onClick = {
+                            sudokuViewModel.isRestartClicked.value = false
+                            timerViewModel.startTimer()
+                        }
+                    ) {
+                        Icon (
+                            Icons.Outlined.Close,
+                            contentDescription = "Close icon"
+                        )
+                    }
+                }
+            }
             Text(
                 text = "Choose Your Puzzle:",
                 fontWeight = FontWeight.Bold
@@ -208,6 +231,7 @@ fun WelcomeDialog(
                         sudokuViewModel.onStart(i)
                         timerViewModel.stopTimer()
                         timerViewModel.startTimer()
+                        sudokuViewModel.isRestartClicked.value = false
                     },
                 ) {
                     Text(LEVELS[i])
@@ -708,8 +732,8 @@ fun RestartButton(
 ) {
     Surface(
         onClick = {
-            sudokuViewModel.onRegenerate()
-            timerViewModel.stopTimer()
+            sudokuViewModel.isRestartClicked.value = true
+            timerViewModel.pauseTimer()
         }
     ) {
         Icon (
@@ -728,7 +752,7 @@ fun Erase(
         modifier = Modifier.padding(8.dp),
     ) {
         Icon (
-            Icons.Rounded.Close,
+            Icons.Rounded.Delete,
             contentDescription = "Icon to clear a cell"
         )
     }
