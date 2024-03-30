@@ -20,13 +20,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
@@ -87,6 +84,7 @@ fun MainApp(
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val hasStarted = sudokuUIState.hasStarted.value
     val stepsToGo = sudokuUIState.stepsToGo.value
+    val hasSteps = sudokuUIState.hasSteps.value
     val showSettings = remember { mutableStateOf(false) }
     val hasCounter by settingsViewModel.hasMistakeCounter.collectAsState()
     val theme by settingsViewModel.theme.collectAsState()
@@ -144,7 +142,7 @@ fun MainApp(
                                 Row (
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    UndoButton()
+                                    UndoButton(hasSteps)
                                     Erase()
                                     Hints()
                                 }
@@ -592,11 +590,9 @@ fun SudokuGrid(
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    val grid: Array<Array<MutableIntState>> = sudokuUIState.usersMatrix
-    val filledGrid: Array<Array<MutableIntState>> = sudokuUIState.filledMatrix
-    val initialGrid: Array<Array<MutableIntState>> = sudokuUIState.matrix
-    val selectedCellRow: Int? = sudokuUIState.selectedCellRow;
-    val selectedCellColumn: Int? = sudokuUIState.selectedCellColumn;
+    val grid: Array<Array<Array<MutableIntState>>> = sudokuUIState.matrix
+    val selectedCellRow: Int = sudokuUIState.selectedCellRow.intValue;
+    val selectedCellColumn: Int = sudokuUIState.selectedCellColumn.intValue;
     val isPaused = sudokuUIState.isPaused.value;
     val unlockedCell = sudokuUIState.unlockedCell;
 
@@ -612,14 +608,11 @@ fun SudokuGrid(
             items(81) {index ->
                 val rowIndex = index / 9
                 val columnIndex = index % 9
-                val gridValue = grid[rowIndex][columnIndex].intValue
+                val gridValue = grid[rowIndex][columnIndex][2].intValue
                 val cellRowIndex = index % 3
                 val isCurrentCell = selectedCellRow == rowIndex && selectedCellColumn == columnIndex
-                var currentGridCellValue = 0
+                val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
 
-                if (selectedCellRow != null && selectedCellColumn != null) {
-                    currentGridCellValue = grid[selectedCellRow][selectedCellColumn].intValue
-                }
 
                 val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
                     else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
@@ -644,8 +637,7 @@ fun SudokuGrid(
 
                             val hasVerticalOutline =
                                 selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
-                            val ignoreVerticalOutline = selectedCellColumn == null ||
-                                    isCurrentCell ||
+                            val ignoreVerticalOutline = isCurrentCell ||
                                     (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
                             if (hasVerticalOutline && !ignoreVerticalOutline && hasRowHighlight) {
                                 drawLine(
@@ -666,7 +658,6 @@ fun SudokuGrid(
                             val hasHorizontalOutline =
                                 selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
                             val ignoreHorizontalOutline = isCurrentCell ||
-                                    selectedCellRow == null ||
                                     (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
                             if (hasHorizontalOutline && !ignoreHorizontalOutline && hasRowHighlight) {
                                 drawLine(
@@ -690,8 +681,8 @@ fun SudokuGrid(
                         displayValue = gridValue.toString()
                     }
 
-                    val expectedValue = filledGrid[rowIndex][columnIndex].intValue
-                    val initialGridValue = initialGrid[rowIndex][columnIndex].intValue
+                    val expectedValue = grid[rowIndex][columnIndex][1].intValue
+                    val initialGridValue = grid[rowIndex][columnIndex][0].intValue
 
                     val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
                     else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
@@ -705,6 +696,10 @@ fun SudokuGrid(
                             scale.animateTo(1f, animationSpec = tween(0))
                             scale.animateTo(3f, animationSpec = tween(350))
                             scale.animateTo(1f, animationSpec = tween(350))
+                        }
+                    } else {
+                        LaunchedEffect(true) {
+                            scale.animateTo(1f, animationSpec = tween(0))
                         }
                     }
 
@@ -793,10 +788,9 @@ fun SelectionNumbers(
 
 @Composable
 fun UndoButton(
+    isEnabled: Boolean = false,
     sudokuViewModel: SudokuViewModel = viewModel()
 ) {
-    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    val isEnabled = sudokuUIState.steps.size > 0
     Button(
         onClick = { sudokuViewModel.onUndo() },
         enabled = isEnabled,
