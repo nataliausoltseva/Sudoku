@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,8 +79,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainApp(
-    sudokuViewModel: SudokuViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel = SudokuViewModel(),
+    settingsViewModel: SettingsViewModel = SettingsViewModel(LocalContext.current),
+    timerViewModel: TimerViewModel = TimerViewModel(),
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val hasStarted = sudokuUIState.hasStarted.value
@@ -95,10 +97,10 @@ fun MainApp(
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             if (!hasStarted || sudokuViewModel.isRestartClicked.value) {
-                WelcomeDialog()
+                WelcomeDialog(sudokuViewModel, timerViewModel)
             } else {
                 if (stepsToGo == 0) {
-                    EndScreen()
+                    EndScreen(sudokuViewModel, timerViewModel, settingsViewModel)
                     KonfettiUI()
                 } else {
                     Column(
@@ -107,7 +109,7 @@ fun MainApp(
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RestartButton()
+                            RestartButton(sudokuViewModel, timerViewModel)
                             Surface(
                                 onClick = { showSettings.value = !showSettings.value },
                                 modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
@@ -118,7 +120,7 @@ fun MainApp(
                                 )
                             }
                         }
-                        Settings(showSettings.value, onCancel = { showSettings.value = false })
+                        Settings(showSettings.value, onCancel = { showSettings.value = false }, settingsViewModel, timerViewModel)
                         Column(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -128,23 +130,23 @@ fun MainApp(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                LevelIndicator()
+                                LevelIndicator(sudokuViewModel)
                                 if (hasCounter) {
-                                    MistakeCounter()
+                                    MistakeCounter(sudokuViewModel)
                                 }
                                 if (hasTimer) {
-                                    Timer()
+                                    Timer(timerViewModel, sudokuViewModel)
                                 }
                             }
                             if (stepsToGo > 0) {
-                                SudokuGrid()
-                                SelectionNumbers()
+                                SudokuGrid(sudokuViewModel, settingsViewModel)
+                                SelectionNumbers(sudokuViewModel)
                                 Row (
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    UndoButton(hasSteps)
-                                    Erase()
-                                    Hints()
+                                    UndoButton(hasSteps, sudokuViewModel)
+                                    Erase(sudokuViewModel)
+                                    Hints(sudokuViewModel)
                                 }
                             }
                         }
@@ -186,8 +188,8 @@ fun KonfettiUI(viewModel: KonfettiViewModel = KonfettiViewModel()) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WelcomeDialog(
-    sudokuViewModel: SudokuViewModel = viewModel(),
-    timerViewModel: TimerViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel,
+    timerViewModel: TimerViewModel,
 ) {
     BasicAlertDialog(
         onDismissRequest = {
@@ -241,9 +243,9 @@ fun WelcomeDialog(
 
 @Composable
 fun EndScreen(
-    sudokuViewModel: SudokuViewModel = viewModel(),
-    timerViewModel: TimerViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel,
+    timerViewModel: TimerViewModel,
+    settingsViewModel: SettingsViewModel,
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val timer = sudokuUIState.timer.value
@@ -260,7 +262,7 @@ fun EndScreen(
 
         Row {
             Text(text = "Difficulty: ")
-            LevelIndicator()
+            LevelIndicator(sudokuViewModel)
         }
 
         if (hasTimer) {
@@ -284,8 +286,8 @@ fun EndScreen(
 fun Settings(
     showSettings: Boolean,
     onCancel: () -> Unit,
-    settingsViewModel: SettingsViewModel = viewModel(),
-    timerViewModel: TimerViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel,
+    timerViewModel: TimerViewModel
     ) {
     if (showSettings) {
         val showMistakes = remember { mutableStateOf(settingsViewModel.showMistakes.value) }
@@ -439,7 +441,7 @@ fun Settings(
 
 @Composable
 fun LevelIndicator(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val currentLevel: MutableState<String> = sudokuUIState.selectedLevel
@@ -452,7 +454,7 @@ fun LevelIndicator(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MistakeCounter(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val mistakesNum: Int = sudokuUIState.mistakesNum.intValue
@@ -492,7 +494,7 @@ fun MistakeCounter(
 
 @Composable
 fun Hints(
-    sudokuViewModel: SudokuViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val hintNum: Int = sudokuUIState.hintNum.intValue
@@ -525,8 +527,8 @@ fun Hints(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Timer(
-    timerViewModel: TimerViewModel = viewModel(),
-    sudokuViewModel: SudokuViewModel = viewModel()
+    timerViewModel: TimerViewModel,
+    sudokuViewModel: SudokuViewModel
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val isPaused = sudokuUIState.isPaused.value
@@ -586,8 +588,8 @@ fun Timer(
 
 @Composable
 fun SudokuGrid(
-    sudokuViewModel: SudokuViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val grid: Array<Array<Array<MutableIntState>>> = sudokuUIState.matrix
@@ -722,8 +724,8 @@ fun SudokuGrid(
 
 @Composable
 fun RestartButton(
-    sudokuViewModel: SudokuViewModel = viewModel(),
-    timerViewModel: TimerViewModel = viewModel(),
+    sudokuViewModel: SudokuViewModel,
+    timerViewModel: TimerViewModel,
 ) {
     Surface(
         onClick = {
@@ -740,7 +742,7 @@ fun RestartButton(
 
 @Composable
 fun Erase(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel,
 ) {
     Button(
         onClick = { sudokuViewModel.onErase() },
@@ -755,7 +757,7 @@ fun Erase(
 
 @Composable
 fun SelectionNumbers(
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel,
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     LazyVerticalGrid(
@@ -789,7 +791,7 @@ fun SelectionNumbers(
 @Composable
 fun UndoButton(
     isEnabled: Boolean = false,
-    sudokuViewModel: SudokuViewModel = viewModel()
+    sudokuViewModel: SudokuViewModel,
 ) {
     Button(
         onClick = { sudokuViewModel.onUndo() },
