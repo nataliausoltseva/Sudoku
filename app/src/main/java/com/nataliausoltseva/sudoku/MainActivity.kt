@@ -88,19 +88,35 @@ fun MainApp(
     val stepsToGo = sudokuUIState.stepsToGo.value
     val hasSteps = sudokuUIState.hasSteps.value
     val showSettings = remember { mutableStateOf(false) }
+
+    // Settings
     val hasCounter by settingsViewModel.hasMistakeCounter.collectAsState()
-    val theme by settingsViewModel.theme.collectAsState()
-    val hasTimer by settingsViewModel.hasTimer.collectAsState()
+    val theme = remember { mutableStateOf(settingsViewModel.theme.value) }
+    val hasTimer = remember { mutableStateOf(settingsViewModel.hasTimer.value) }
+    val showMistakes = remember { mutableStateOf(settingsViewModel.showMistakes.value) }
+    val hasMistakesCount = remember { mutableStateOf(settingsViewModel.hasMistakeCounter.value) }
+    val hasHighlightSameNumbers = remember { mutableStateOf(settingsViewModel.hasHighlightSameNumbers.value) }
+    val hasRowHighlight = remember { mutableStateOf(settingsViewModel.hasRowHighlight.value) }
 
     SudokuTheme(
-        darkTheme = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
+        darkTheme = theme.value == "dark" || (theme.value == "system" && isSystemInDarkTheme())
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             if (!hasStarted || sudokuViewModel.isRestartClicked.value) {
-                WelcomeDialog(sudokuViewModel, timerViewModel)
+                WelcomeDialog(
+                    isRestartClicked = sudokuViewModel.isRestartClicked,
+                    onStartGame = { sudokuViewModel.onStart(it) },
+                    onStartTimer = { timerViewModel.startTimer() },
+                    onStopTimer = { timerViewModel.stopTimer() }
+                )
             } else {
                 if (stepsToGo == 0) {
-                    EndScreen(sudokuViewModel, timerViewModel, settingsViewModel)
+                    EndScreen(
+                        hasTimer = settingsViewModel.hasTimer.collectAsState().value,
+                        level = sudokuUIState.selectedLevel.value,
+                        formattedTime = timerViewModel.formatTime(sudokuUIState.timer.value),
+                        onRegenerate = { sudokuViewModel.onRegenerate() }
+                    )
                     KonfettiUI()
                 } else {
                     Column(
@@ -109,7 +125,10 @@ fun MainApp(
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RestartButton(sudokuViewModel, timerViewModel)
+                            RestartButton(
+                                isRestartClicked = sudokuViewModel.isRestartClicked,
+                                onPauseTimer = { timerViewModel.pauseTimer() }
+                            )
                             Surface(
                                 onClick = { showSettings.value = !showSettings.value },
                                 modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
@@ -120,7 +139,34 @@ fun MainApp(
                                 )
                             }
                         }
-                        Settings(showSettings.value, onCancel = { showSettings.value = false }, settingsViewModel, timerViewModel)
+                        Settings(
+                            showSettings.value,
+                            onCancel = { showSettings.value = false },
+                            showMistakes,
+                            hasMistakesCount,
+                            hasHighlightSameNumbers,
+                            hasRowHighlight,
+                            hasTimer,
+                            theme,
+                            onSave = {
+                                _showMistakes: Boolean,
+                                _hasMistakesCount: Boolean,
+                                _theme: String,
+                                _hasHighlightSameNumbers: Boolean,
+                                _hasRowHighlight: Boolean,
+                                _hasTimer: Boolean,
+                                 -> settingsViewModel.onSave(
+                                _showMistakes,
+                                _hasMistakesCount,
+                                _theme,
+                                _hasHighlightSameNumbers,
+                                _hasRowHighlight,
+                                _hasTimer
+                                )
+                            },
+                            onPauseTimer = { timerViewModel.pauseTimer() },
+                            onStartTimer = { timerViewModel.startTimer() }
+                        )
                         Column(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -130,11 +176,11 @@ fun MainApp(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                LevelIndicator(sudokuViewModel)
+                                LevelIndicator(level = sudokuUIState.selectedLevel.value)
                                 if (hasCounter) {
                                     MistakeCounter(sudokuViewModel)
                                 }
-                                if (hasTimer) {
+                                if (hasTimer.value) {
                                     Timer(timerViewModel, sudokuViewModel)
                                 }
                             }
@@ -188,12 +234,14 @@ fun KonfettiUI(viewModel: KonfettiViewModel = KonfettiViewModel()) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WelcomeDialog(
-    sudokuViewModel: SudokuViewModel,
-    timerViewModel: TimerViewModel,
+    isRestartClicked: MutableState<Boolean>,
+    onStartGame: (index: Int) -> Unit,
+    onStartTimer: () -> Unit,
+    onStopTimer: () -> Unit,
 ) {
     BasicAlertDialog(
         onDismissRequest = {
-            sudokuViewModel.isRestartClicked.value = false
+            isRestartClicked.value = false
         },
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -203,15 +251,15 @@ fun WelcomeDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(6.dp, 6.dp, 6.dp, 12.dp)
         ) {
-            if (sudokuViewModel.isRestartClicked.value) {
+            if (isRestartClicked.value) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     Surface(
                         onClick = {
-                            sudokuViewModel.isRestartClicked.value = false
-                            timerViewModel.startTimer()
+                            isRestartClicked.value = false
+                            onStartTimer()
                         }
                     ) {
                         Icon (
@@ -228,10 +276,10 @@ fun WelcomeDialog(
             for (i in LEVELS.indices) {
                 TextButton(
                     onClick = {
-                        sudokuViewModel.onStart(i)
-                        timerViewModel.stopTimer()
-                        timerViewModel.startTimer()
-                        sudokuViewModel.isRestartClicked.value = false
+                        onStartGame(i)
+                        onStopTimer()
+                        onStartTimer()
+                        isRestartClicked.value = false
                     },
                 ) {
                     Text(LEVELS[i])
@@ -243,14 +291,11 @@ fun WelcomeDialog(
 
 @Composable
 fun EndScreen(
-    sudokuViewModel: SudokuViewModel,
-    timerViewModel: TimerViewModel,
-    settingsViewModel: SettingsViewModel,
+    hasTimer: Boolean,
+    level: String,
+    formattedTime: String,
+    onRegenerate: () -> Unit
 ) {
-    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    val timer = sudokuUIState.timer.value
-    val hasTimer by settingsViewModel.hasTimer.collectAsState()
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -262,18 +307,18 @@ fun EndScreen(
 
         Row {
             Text(text = "Difficulty: ")
-            LevelIndicator(sudokuViewModel)
+            LevelIndicator(level)
         }
 
         if (hasTimer) {
             Row {
                 Text(text = "Time: ")
-                Text(text = timerViewModel.formatTime(timer))
+                Text(text = formattedTime)
             }
         }
 
         TextButton(
-            onClick = { sudokuViewModel.onRegenerate() },
+            onClick = { onRegenerate() },
             modifier = Modifier.padding(8.dp)
         ) {
             Text("New Game")
@@ -286,17 +331,24 @@ fun EndScreen(
 fun Settings(
     showSettings: Boolean,
     onCancel: () -> Unit,
-    settingsViewModel: SettingsViewModel,
-    timerViewModel: TimerViewModel
-    ) {
+    showMistakes: MutableState<Boolean>,
+    hasMistakesCount: MutableState<Boolean>,
+    hasHighlightSameNumbers: MutableState<Boolean>,
+    hasRowHighlight: MutableState<Boolean>,
+    hasTimer: MutableState<Boolean>,
+    theme: MutableState<String>,
+    onSave: (
+        showMistakes: Boolean,
+        hasMistakesCount: Boolean,
+        theme:String,
+        hasHighlightSameNumbers: Boolean,
+        hasRowHighlight: Boolean,
+        hasTimer: Boolean,
+    ) -> Unit,
+    onPauseTimer: () -> Unit,
+    onStartTimer: () -> Unit
+) {
     if (showSettings) {
-        val showMistakes = remember { mutableStateOf(settingsViewModel.showMistakes.value) }
-        val hasMistakesCount = remember { mutableStateOf(settingsViewModel.hasMistakeCounter.value) }
-        val theme = remember { mutableStateOf(settingsViewModel.theme.value) }
-        val hasHighlightSameNumbers = remember { mutableStateOf(settingsViewModel.hasHighlightSameNumbers.value) }
-        val hasRowHighlight = remember { mutableStateOf(settingsViewModel.hasRowHighlight.value) }
-        val hasTimer = remember { mutableStateOf(settingsViewModel.hasTimer.value) }
-
         BasicAlertDialog(
             onDismissRequest = {},
             modifier = Modifier
@@ -413,7 +465,7 @@ fun Settings(
                     }
                     TextButton(
                         onClick = {
-                            settingsViewModel.onSave(
+                            onSave(
                                 showMistakes.value,
                                 hasMistakesCount.value,
                                 theme.value,
@@ -424,9 +476,9 @@ fun Settings(
                             onCancel()
 
                             if (!hasTimer.value) {
-                                timerViewModel.pauseTimer()
+                                onPauseTimer()
                             } else {
-                                timerViewModel.startTimer()
+                                onStartTimer()
                             }
                         },
                         modifier = Modifier.padding(8.dp),
@@ -441,12 +493,10 @@ fun Settings(
 
 @Composable
 fun LevelIndicator(
-    sudokuViewModel: SudokuViewModel
+    level: String,
 ) {
-    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
-    val currentLevel: MutableState<String> = sudokuUIState.selectedLevel
     Text(
-        text = currentLevel.value,
+        text = level,
         modifier = Modifier.padding(15.dp, 0.dp, 0.dp, 0.dp)
     )
 }
@@ -724,13 +774,13 @@ fun SudokuGrid(
 
 @Composable
 fun RestartButton(
-    sudokuViewModel: SudokuViewModel,
-    timerViewModel: TimerViewModel,
+    isRestartClicked: MutableState<Boolean>,
+    onPauseTimer: () -> Unit
 ) {
     Surface(
         onClick = {
-            sudokuViewModel.isRestartClicked.value = true
-            timerViewModel.pauseTimer()
+            isRestartClicked.value = true
+            onPauseTimer()
         }
     ) {
         Icon (
