@@ -2,15 +2,6 @@ package com.nataliausoltseva.sudoku.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
-
-
 val md_theme_light_primary = Color(0xFF6750A4)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFFEADDFF)
@@ -37,7 +28,7 @@ val md_theme_light_onSurfaceVariant = Color(0xFF49454F)
 val md_theme_light_inverseSurface = Color(0xFF313033)
 val md_theme_light_inverseOnSurface = Color(0xFFF4EFF4)
 val md_theme_light_inversePrimary = Color(0xFFD0BCFF)
-val md_theme_light_shadow = Color(0xFF000000)
+//val md_theme_light_shadow = Color(0xFF000000)
 val md_theme_light_surfaceTint = Color(0xFF6750A4)
 val md_theme_light_outlineVariant = Color(0xFFCAC4D0)
 val md_theme_light_scrim = Color(0xFF000000)
@@ -68,10 +59,10 @@ val md_theme_dark_onSurfaceVariant = Color(0xFFCAC4D0)
 val md_theme_dark_inverseSurface = Color(0xFFE6E1E5)
 val md_theme_dark_inverseOnSurface = Color(0xFF313033)
 val md_theme_dark_inversePrimary = Color(0xFF6750A4)
-val md_theme_dark_shadow = Color(0xFF000000)
+//val md_theme_dark_shadow = Color(0xFF000000)
 val md_theme_dark_surfaceTint = Color(0xFFD0BCFF)
 val md_theme_dark_outlineVariant = Color(0xFF49454F)
 val md_theme_dark_scrim = Color(0xFF000000)
 
 
-val seed = Color(0xFF6750A4)
+//val seed = Color(0xFF6750A4)

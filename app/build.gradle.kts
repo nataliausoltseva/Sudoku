@@ -65,7 +65,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation("androidx.compose.material:material-icons-extended:1.6.3")
-    implementation("nl.dionsegijn:konfetti-compose:2.0.4")
-    implementation("androidx.compose.runtime:runtime-livedata:1.4.3")
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.konfetti.compose)
+    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.datastore.preferences)
 }
