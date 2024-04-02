@@ -1,4 +1,4 @@
-package com.nataliausoltseva.sudoku
+package com.nataliausoltseva.sudoku.timerData
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

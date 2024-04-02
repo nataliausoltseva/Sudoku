@@ -1,4 +1,4 @@
-package com.nataliausoltseva.sudoku
+package com.nataliausoltseva.sudoku.konfettiData
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -28,7 +28,7 @@ class KonfettiViewModel : ViewModel() {
     sealed class State {
         class Started(val party: List<Party>) : State()
 
-        object Idle : State()
+        data object Idle : State()
     }
 }
 
