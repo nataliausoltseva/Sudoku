@@ -373,8 +373,7 @@ class SudokuViewModel: ViewModel() {
             }
             val isEmptyCell = grid[row][column][2] != 0
             val isNotCurrentValue = grid[row][column][2] != selectedDigit
-            if (isEmptyCell && isNotCurrentValue)
-            {
+            if (isEmptyCell && isNotCurrentValue) {
                 selectionNumbers[grid[row][column][2] - 1]++
 
                 if (grid[row][column][1] != selectedDigit) {

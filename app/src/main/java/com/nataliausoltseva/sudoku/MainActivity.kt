@@ -1,6 +1,9 @@
 package com.nataliausoltseva.sudoku
 
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
@@ -65,12 +68,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,6 +113,16 @@ fun MainApp(
 
     val isRestartClicked = remember { mutableStateOf(false) }
 
+    val view = LocalView.current
+    LaunchedEffect(sudokuUIState.mistakesNum) {
+        if (sudokuUIState.mistakesNum > 0) {
+            view.performHapticFeedback(HapticFeedbackConstants.REJECT)
+        }
+    }
+
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Vibrator::class.java)
+
     SudokuTheme(
         darkTheme = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
     ) {
@@ -128,6 +143,15 @@ fun MainApp(
                         onRegenerate = { sudokuViewModel.onRegenerate() }
                     )
                     KonfettiUI()
+                    LaunchedEffect(true) {
+                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        delay(500)
+                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        delay(1000)
+                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        delay(500)
+                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                    }
                 } else {
                     Column(
                         horizontalAlignment = Alignment.End,
@@ -785,9 +809,9 @@ fun SudokuGrid(
                     val initialGridValue = grid[rowIndex][columnIndex][0]
 
                     val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
-                    else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
-                    else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
-                    else MaterialTheme.colorScheme.onSecondaryContainer
+                        else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
+                        else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.onSecondaryContainer
 
                     val scale = remember { Animatable(1f) }
                     val isUnlockedCell = unlockedCell[0] == rowIndex && unlockedCell[1] == columnIndex
