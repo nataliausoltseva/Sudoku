@@ -1,8 +1,11 @@
 package com.nataliausoltseva.sudoku.sudokaData
 
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.mutableIntStateOf
+
 data class SudokuState(
     val hasStarted: Boolean = false,
-    var matrix: Array<Array<Array<Int>>> = Array(9) { Array(9) {  Array(3) { 0 } } },
+    var matrix: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) {  Array(3) { mutableIntStateOf(0) } } },
     var selectionNumbers: Array<Int> =  Array(9) { 0 },
     val selectedCellRow: Int = 0,
     val selectedCellColumn: Int = 0,
@@ -10,12 +13,13 @@ data class SudokuState(
     val selectedLevel: String = "Easy",
     val isPaused: Boolean = false,
     val stepsToGo: Int = 0,
-    val timer: Long = 0,
     val hintNum: Int = 3,
     var unlockedCell: Array<Int?> = Array(2) { null },
     val steps: List<Step> = listOf(),
     val hasSteps: Boolean = false,
-    val isRestartClicked: Boolean = false
+    val isRestartClicked: Boolean = false,
+    val isNotesEnabled: Boolean = false,
+    var matrixWithNotes: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) {  Array(9) { mutableIntStateOf(0) }  } },
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -32,11 +36,13 @@ data class SudokuState(
         if (selectedLevel != other.selectedLevel) return false
         if (isPaused != other.isPaused) return false
         if (stepsToGo != other.stepsToGo) return false
-        if (timer != other.timer) return false
         if (hintNum != other.hintNum) return false
         if (!unlockedCell.contentEquals(other.unlockedCell)) return false
         if (steps != other.steps) return false
         if (hasSteps != other.hasSteps) return false
+        if (isRestartClicked != other.isRestartClicked) return false
+        if (isNotesEnabled != other.isNotesEnabled) return false
+        if (!matrixWithNotes.contentDeepEquals(other.matrixWithNotes)) return false
 
         return true
     }
@@ -51,11 +57,13 @@ data class SudokuState(
         result = 31 * result + selectedLevel.hashCode()
         result = 31 * result + isPaused.hashCode()
         result = 31 * result + stepsToGo
-        result = 31 * result + timer.hashCode()
         result = 31 * result + hintNum
         result = 31 * result + unlockedCell.contentHashCode()
         result = 31 * result + steps.hashCode()
         result = 31 * result + hasSteps.hashCode()
+        result = 31 * result + isRestartClicked.hashCode()
+        result = 31 * result + isNotesEnabled.hashCode()
+        result = 31 * result + matrixWithNotes.contentDeepHashCode()
         return result
     }
 }

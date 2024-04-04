@@ -1,5 +1,7 @@
 package com.nataliausoltseva.sudoku.sudokaData
 
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.math.floor
 
-private const val GRID_SIZE = 9
+const val GRID_SIZE = 9
 private const val GRID_SIZE_SQUARE_ROOT = 3
 
 val LEVELS = arrayOf("Easy", "Medium", "Hard", "Expert", "Master")
@@ -35,13 +37,13 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    private fun fillDiagonally(grid: Array<Array<Array<Int>>>) {
+    private fun fillDiagonally(grid: Array<Array<Array<MutableIntState>>>) {
         for (i in 0 until GRID_SIZE step GRID_SIZE_SQUARE_ROOT) {
             fillBox(i, i, grid)
         }
     }
 
-    private fun fillBox(row: Int, column: Int, grid: Array<Array<Array<Int>>>) {
+    private fun fillBox(row: Int, column: Int, grid: Array<Array<Array<MutableIntState>>>) {
         var generatedDigit: Int
 
         for (i in 0 until GRID_SIZE_SQUARE_ROOT) {
@@ -50,15 +52,15 @@ class SudokuViewModel: ViewModel() {
                     generatedDigit = getRandomNumber(GRID_SIZE)
                 } while (!isUnusedInBox(row, column, generatedDigit, grid))
 
-                grid[row + i][column + j] = Array(3) { generatedDigit }
+                grid[row + i][column + j] = Array(3) { mutableIntStateOf(generatedDigit) }
             }
         }
     }
 
-    private fun isUnusedInBox(rowStart: Int, columnStart: Int, digit: Int, grid: Array<Array<Array<Int>>>) : Boolean {
+    private fun isUnusedInBox(rowStart: Int, columnStart: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
         for (i in 0 until GRID_SIZE_SQUARE_ROOT) {
             for (j in 0 until GRID_SIZE_SQUARE_ROOT) {
-                if (grid[rowStart + i][columnStart + j][0] == digit) {
+                if (grid[rowStart + i][columnStart + j][0].intValue == digit) {
                     return false
                 }
             }
@@ -66,7 +68,7 @@ class SudokuViewModel: ViewModel() {
         return true
     }
 
-    private fun fillRemaining(i: Int, j: Int, grid: Array<Array<Array<Int>>>) : Boolean {
+    private fun fillRemaining(i: Int, j: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
         var newI = i
         var newJ = j
         if (newJ >= GRID_SIZE && newI < GRID_SIZE - 1) {
@@ -98,19 +100,19 @@ class SudokuViewModel: ViewModel() {
 
         for (num in 1..GRID_SIZE) {
             if (checkIfSafe(newI, newJ, num, grid)) {
-                grid[newI][newJ] = Array(3) { num }
+                grid[newI][newJ] = Array(3) { mutableIntStateOf(num) }
 
                 if (fillRemaining(newI, newJ + 1, grid)) {
                     return true
                 }
-                grid[newI][newJ][0] = 0
-                grid[newI][newJ][2] = 0
+                grid[newI][newJ][0].intValue = 0
+                grid[newI][newJ][2].intValue = 0
             }
         }
         return false
     }
 
-    private fun checkIfSafe(row: Int, column: Int, digit: Int, grid: Array<Array<Array<Int>>>) : Boolean {
+    private fun checkIfSafe(row: Int, column: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
         return isUnusedInRow(row, digit, grid) &&
                 isUnusedInColumn(column, digit, grid) &&
                 isUnusedInBox(
@@ -121,18 +123,18 @@ class SudokuViewModel: ViewModel() {
                 )
     }
 
-    private fun isUnusedInRow(row: Int, digit: Int, grid: Array<Array<Array<Int>>>) : Boolean {
+    private fun isUnusedInRow(row: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
         for (i in 0 until GRID_SIZE) {
-            if (grid[row][i][0] == digit) {
+            if (grid[row][i][0].intValue == digit) {
                 return false
             }
         }
         return true
     }
 
-    private fun isUnusedInColumn(column: Int, digit: Int, grid: Array<Array<Array<Int>>>) : Boolean {
+    private fun isUnusedInColumn(column: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
         for (i in 0 until GRID_SIZE) {
-            if (grid[i][column][0] == digit) {
+            if (grid[i][column][0].intValue == digit) {
                 return false
             }
         }
@@ -140,18 +142,18 @@ class SudokuViewModel: ViewModel() {
         return true
     }
 
-    private fun removeDigits(grid: Array<Array<Array<Int>>>, selectionNumbers: Array<Int>, stepsToGo: Int): Int {
+    private fun removeDigits(grid: Array<Array<Array<MutableIntState>>>, selectionNumbers: Array<Int>, stepsToGo: Int): Int {
         var newStepsToGo = stepsToGo
         for (j in 0 until GRID_SIZE) {
             val level = numToRemove
             for (k in 0 until (level..GRID_SIZE).random()) {
                 val i = getRandomUniqueCell(j, grid)
 
-                if (grid[i][j][0] != 0) {
-                    val currentValue = grid[i][j][0]
+                if (grid[i][j][0].intValue != 0) {
+                    val currentValue = grid[i][j][0].intValue
                     selectionNumbers[currentValue - 1] += 1
-                    grid[i][j][0] = 0
-                    grid[i][j][2] = 0
+                    grid[i][j][0].intValue = 0
+                    grid[i][j][2].intValue = 0
                     newStepsToGo++
                 }
             }
@@ -159,10 +161,10 @@ class SudokuViewModel: ViewModel() {
         return newStepsToGo
     }
 
-    private fun getRandomUniqueCell(column: Int, grid: Array<Array<Array<Int>>>): Int {
+    private fun getRandomUniqueCell(column: Int, grid: Array<Array<Array<MutableIntState>>>): Int {
         val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
         val i = cellId / GRID_SIZE
-        if (grid[i][column][0] == 0) {
+        if (grid[i][column][0].intValue == 0) {
             getRandomUniqueCell(column, grid)
         }
 
@@ -184,8 +186,12 @@ class SudokuViewModel: ViewModel() {
     }
 
     fun onSelection(digit: Int) {
-        recordStep()
-        insertDigit(digit)
+        if (uiState.value.isNotesEnabled) {
+            insertNoteDigit(digit)
+        } else {
+            recordStep()
+            insertDigit(digit)
+        }
     }
 
     fun onSelectCell(row: Int, column: Int) {
@@ -202,7 +208,7 @@ class SudokuViewModel: ViewModel() {
             it.copy(
                 selectedLevel = LEVELS[index],
                 hasStarted = true,
-                matrix = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(3) { 0 }  } },
+                matrix = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(3) { mutableIntStateOf(0) }  } },
                 selectionNumbers = Array(9) { 0 },
                 mistakesNum = 0,
                 stepsToGo = 0,
@@ -229,14 +235,6 @@ class SudokuViewModel: ViewModel() {
         _uiState.update {
             it.copy(
                 isPaused = false,
-            )
-        }
-    }
-
-    fun setTimer(timeValue: Long) {
-        _uiState.update {
-            it.copy(
-                timer = timeValue,
             )
         }
     }
@@ -268,12 +266,12 @@ class SudokuViewModel: ViewModel() {
         val selectionNumbers = uiState.value.selectionNumbers
         var stepsToGo = uiState.value.stepsToGo
         val cell = grid[row][column]
-        val digitNumber = cell[2]
-        val isDeletable = cell[0] == 0
+        val digitNumber = cell[2].intValue
+        val isDeletable = cell[0].intValue == 0
         if (digitNumber != 0 && isDeletable) {
             recordStep()
             selectionNumbers[digitNumber - 1]++
-            grid[row][column][2] = 0
+            grid[row][column][2].intValue = 0
             stepsToGo++
 
             _uiState.update {
@@ -292,7 +290,7 @@ class SudokuViewModel: ViewModel() {
         val steps = uiState.value.steps.toMutableList()
         var stepsToGo = uiState.value.stepsToGo
         val step = steps.last()
-        val currentCellDigit = grid[step.xIndex][step.yIndex][2]
+        val currentCellDigit = grid[step.xIndex][step.yIndex][2].intValue
 
         if (step.digit != currentCellDigit) {
             if (step.digit != 0 && currentCellDigit == 0) {
@@ -307,7 +305,7 @@ class SudokuViewModel: ViewModel() {
             }
         }
 
-        grid[step.xIndex][step.yIndex][2] = step.digit
+        grid[step.xIndex][step.yIndex][2].intValue = step.digit
         steps.removeLast()
 
         _uiState.update {
@@ -321,6 +319,14 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
+    fun onNote() {
+        _uiState.update {
+            it.copy(
+                isNotesEnabled = !uiState.value.isNotesEnabled
+            )
+        }
+    }
+
     private fun recordStep() {
         val steps = uiState.value.steps.toMutableList()
         val selectedCellRow = uiState.value.selectedCellRow
@@ -330,7 +336,7 @@ class SudokuViewModel: ViewModel() {
             Step(
                 selectedCellRow,
                 selectedCellColumn,
-                grid[selectedCellRow][selectedCellColumn][2]
+                grid[selectedCellRow][selectedCellColumn][2].intValue
             )
         )
         _uiState.update {
@@ -341,14 +347,14 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    private fun unlockACell(grid: Array<Array<Array<Int>>>, unlockedCell: Array<Int?>, selectionNumbers: Array<Int>) {
+    private fun unlockACell(grid: Array<Array<Array<MutableIntState>>>, unlockedCell: Array<Int?>, selectionNumbers: Array<Int>) {
         val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
         val i = cellId / GRID_SIZE
         val y = cellId % GRID_SIZE
-        if (grid[i][y][0] == 0 && grid[i][y][2] == 0) {
-            val digitToInsert = grid[i][y][1]
-            grid[i][y][0] = digitToInsert
-            grid[i][y][2] = digitToInsert
+        if (grid[i][y][0].intValue == 0 && grid[i][y][2].intValue == 0) {
+            val digitToInsert = grid[i][y][1].intValue
+            grid[i][y][0].intValue = digitToInsert
+            grid[i][y][2].intValue = digitToInsert
             unlockedCell[0] = i
             unlockedCell[1] = y
             selectionNumbers[digitToInsert - 1]--
@@ -365,25 +371,25 @@ class SudokuViewModel: ViewModel() {
         var mistakesNum = uiState.value.mistakesNum
         var stepsToGo = uiState.value.stepsToGo
 
-        if (selectedDigit != 0 && grid[row][column][0] == 0) {
-            if (grid[row][column][1] != selectedDigit) {
+        if (selectedDigit != 0 && grid[row][column][0].intValue == 0) {
+            if (grid[row][column][1].intValue != selectedDigit) {
                 mistakesNum++
             } else {
                 stepsToGo--
             }
-            val isEmptyCell = grid[row][column][2] != 0
-            val isNotCurrentValue = grid[row][column][2] != selectedDigit
+            val isEmptyCell = grid[row][column][2].intValue != 0
+            val isNotCurrentValue = grid[row][column][2].intValue != selectedDigit
             if (isEmptyCell && isNotCurrentValue) {
-                selectionNumbers[grid[row][column][2] - 1]++
+                selectionNumbers[grid[row][column][2].intValue - 1]++
 
-                if (grid[row][column][1] != selectedDigit) {
+                if (grid[row][column][1].intValue != selectedDigit) {
                     stepsToGo++
                 }
             }
 
             selectionNumbers[selectedDigit - 1]--
 
-            grid[row][column][2] = selectedDigit
+            grid[row][column][2].intValue = selectedDigit
 
             _uiState.update {
                 it.copy(
@@ -393,6 +399,17 @@ class SudokuViewModel: ViewModel() {
                     stepsToGo = stepsToGo
                 )
             }
+        }
+    }
+
+    private fun insertNoteDigit(digit: Int) {
+        val gridWithNotes = uiState.value.matrixWithNotes
+        val row = uiState.value.selectedCellRow
+        val column = uiState.value.selectedCellColumn
+        gridWithNotes[row][column][digit - 1].intValue = digit
+
+        _uiState.update {
+            it.copy(matrixWithNotes = gridWithNotes)
         }
     }
 
