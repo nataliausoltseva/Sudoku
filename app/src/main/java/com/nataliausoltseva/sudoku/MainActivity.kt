@@ -10,6 +10,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -34,7 +35,6 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -73,12 +73,10 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
-import com.nataliausoltseva.sudoku.sudokaData.GRID_SIZE
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
@@ -750,9 +748,7 @@ fun SudokuGrid(
                 val rowDividerColour = if (rowIndex % 3 != 0) MaterialTheme.colorScheme.surface
                     else MaterialTheme.colorScheme.outline
 
-                Surface(
-                    color = backgroundCellColour,
-                    onClick = { onSelectCell(rowIndex, columnIndex) },
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .drawBehind {
@@ -799,6 +795,8 @@ fun SudokuGrid(
                                 )
                             }
                         }
+                        .clickable { onSelectCell(rowIndex, columnIndex) }
+                        .background(backgroundCellColour)
                 ) {
                     var displayValue = ""
                     if (gridValue != 0 && !isPaused) {
@@ -831,24 +829,29 @@ fun SudokuGrid(
                     val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
                     if (hasNotesInCurrentCell) {
                         var actualIndex = 0
-                        Column {
+                        Column(
+                            modifier = Modifier
+                                .padding(6.dp, 2.dp, 3.dp, 4.dp)
+                        ) {
+                            println("item: $index")
                             for (row in 0 until 3) {
-                                Row {
+                                Row(
+                                    modifier = Modifier.height(19.dp)
+                                ) {
                                     for (i in 0 until 3) {
-                                        Column {
-                                            val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
+                                        println(actualIndex)
+                                        val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
                                             else gridWithNoteCell[actualIndex].intValue.toString()
-                                            Text(
-                                                text = noteDisplay,
-                                                modifier = Modifier.offset(),
-                                                fontSize = 10.sp
-                                            )
-                                            actualIndex++
-                                        }
+                                        Text(
+                                            text = noteDisplay,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        actualIndex++
                                     }
-
                                 }
                             }
+                            actualIndex = 0
                         }
                     } else {
                         Text(

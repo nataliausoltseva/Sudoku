@@ -282,6 +282,15 @@ class SudokuViewModel: ViewModel() {
                 )
             }
         }
+
+        val gridWithNotes = uiState.value.matrixWithNotes
+        gridWithNotes[row][column].forEach {
+            if (it.intValue == 0) return@forEach
+            it.intValue = 0
+        }
+        _uiState.update {
+            it.copy(matrixWithNotes = gridWithNotes)
+        }
     }
 
     fun onUndo() {
@@ -406,7 +415,11 @@ class SudokuViewModel: ViewModel() {
         val gridWithNotes = uiState.value.matrixWithNotes
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
-        gridWithNotes[row][column][digit - 1].intValue = digit
+        if (gridWithNotes[row][column][digit - 1].intValue == 0) {
+            gridWithNotes[row][column][digit - 1].intValue = digit
+        } else {
+            gridWithNotes[row][column][digit - 1].intValue = 0
+        }
 
         _uiState.update {
             it.copy(matrixWithNotes = gridWithNotes)
