@@ -117,12 +117,10 @@ fun MainApp(
     val context = LocalContext.current
     val vibrator = context.getSystemService(Vibrator::class.java)
 
-    println("line")
     SudokuTheme(
         darkTheme = settingsUIState.theme == "dark" || (settingsUIState.theme == "system" && isSystemInDarkTheme())
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            println("line")
             if (!sudokuUIState.hasStarted || isRestartClicked.value) {
                 WelcomeDialog(
                     isRestartClicked = isRestartClicked,
@@ -242,9 +240,12 @@ fun MainApp(
                                     unlockedCell = sudokuUIState.unlockedCell,
                                     gridWithNotes = sudokuUIState.matrixWithNotes,
                                 )
+                                val currentCell =sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2]
                                 SelectionNumbers(
                                     selectionNumbers = sudokuUIState.selectionNumbers,
-                                    onSelection = { sudokuViewModel.onSelection(it) }
+                                    onSelection = { sudokuViewModel.onSelection(it) },
+                                    cannotInsert = sudokuUIState.isNotesEnabled &&
+                                            currentCell.intValue != 0
                                 )
                                 Row (
                                     verticalAlignment = Alignment.CenterVertically
@@ -827,19 +828,17 @@ fun SudokuGrid(
 
                     val gridWithNoteCell = gridWithNotes[rowIndex][columnIndex]
                     val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
-                    if (hasNotesInCurrentCell) {
+                    if (hasNotesInCurrentCell && displayValue == "") {
                         var actualIndex = 0
                         Column(
                             modifier = Modifier
                                 .padding(6.dp, 2.dp, 3.dp, 4.dp)
                         ) {
-                            println("item: $index")
                             for (row in 0 until 3) {
                                 Row(
                                     modifier = Modifier.height(19.dp)
                                 ) {
                                     for (i in 0 until 3) {
-                                        println(actualIndex)
                                         val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
                                             else gridWithNoteCell[actualIndex].intValue.toString()
                                         Text(
@@ -908,8 +907,27 @@ fun Erase(
 @Composable
 fun SelectionNumbers(
     selectionNumbers: Array<Int>,
-    onSelection: (number: Int) -> Unit
+    onSelection: (number: Int) -> Unit,
+    cannotInsert: Boolean,
 ) {
+    val isClicked = remember { mutableStateOf(false) }
+    fun onSelect(label: Int) {
+        if (cannotInsert) {
+            isClicked.value = true
+        } else {
+            onSelection(label)
+        }
+    }
+
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Vibrator::class.java)
+    LaunchedEffect(isClicked.value) {
+        if (isClicked.value && cannotInsert) {
+            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+            isClicked.value = false
+        }
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
         modifier = Modifier.padding(0.dp, 16.dp, 0.dp, 0.dp),
@@ -923,7 +941,7 @@ fun SelectionNumbers(
                 }
 
                 Surface(
-                    onClick = { onSelection(label) },
+                    onClick = { onSelect(label) },
                     enabled = isAvailable,
                 ) {
                     val displayValue = label.toString()

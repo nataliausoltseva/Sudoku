@@ -189,7 +189,6 @@ class SudokuViewModel: ViewModel() {
         if (uiState.value.isNotesEnabled) {
             insertNoteDigit(digit)
         } else {
-            recordStep()
             insertDigit(digit)
         }
     }
@@ -268,11 +267,13 @@ class SudokuViewModel: ViewModel() {
         val cell = grid[row][column]
         val digitNumber = cell[2].intValue
         val isDeletable = cell[0].intValue == 0
+        var digit: Int? = null
+        val previousCellDigit = grid[row][column][2].intValue
         if (digitNumber != 0 && isDeletable) {
-            recordStep()
             selectionNumbers[digitNumber - 1]++
             grid[row][column][2].intValue = 0
             stepsToGo++
+            digit = 0
 
             _uiState.update {
                 it.copy(
@@ -284,38 +285,59 @@ class SudokuViewModel: ViewModel() {
         }
 
         val gridWithNotes = uiState.value.matrixWithNotes
+        val previousCellWithNote = uiState.value.matrixWithNotes[row][column]
         gridWithNotes[row][column].forEach {
             if (it.intValue == 0) return@forEach
             it.intValue = 0
         }
+
+        recordStep(
+            cellWithNote = Array(9) { mutableIntStateOf(0) },
+            cellDigit = digit,
+            previousCellDigit = previousCellDigit,
+            previousCellWithNote = previousCellWithNote
+        )
+
         _uiState.update {
             it.copy(matrixWithNotes = gridWithNotes)
         }
     }
 
     fun onUndo() {
-        val selectionNumbers = uiState.value.selectionNumbers
-        val grid = uiState.value.matrix
         val steps = uiState.value.steps.toMutableList()
+        val selectionNumbers = uiState.value.selectionNumbers
+        var selectedCellRow = uiState.value.selectedCellRow
+        var selectedCellColumn = uiState.value.selectedCellColumn
         var stepsToGo = uiState.value.stepsToGo
-        val step = steps.last()
-        val currentCellDigit = grid[step.xIndex][step.yIndex][2].intValue
+        val grid = uiState.value.matrix
+        val gridWithNotes = uiState.value.matrixWithNotes
 
-        if (step.digit != currentCellDigit) {
-            if (step.digit != 0 && currentCellDigit == 0) {
-                stepsToGo--
-                selectionNumbers[step.digit - 1]--
-            } else if (step.digit == 0) {
-                stepsToGo++
-                selectionNumbers[currentCellDigit - 1]++
-            } else {
-                selectionNumbers[step.digit - 1]--
-                selectionNumbers[currentCellDigit - 1]++
+        val step = steps.last()
+
+        if (step.digit != null && step.previousDigit != null) {
+            val digit = (step.digit - 1).coerceAtLeast(0)
+            selectionNumbers[digit]++
+            stepsToGo++
+            grid[selectedCellRow][selectedCellColumn][2].intValue = step.previousDigit
+        } else {
+            gridWithNotes[selectedCellRow][selectedCellColumn].forEachIndexed { index, _ ->
+                println(step.previousNotes[index].intValue)
+                println(" - - - - -- - - ")
+                println(gridWithNotes[selectedCellRow][selectedCellColumn][index].intValue)
+                gridWithNotes[selectedCellRow][selectedCellColumn][index].intValue = step.previousNotes[index].intValue
             }
         }
 
-        grid[step.xIndex][step.yIndex][2].intValue = step.digit
         steps.removeLast()
+
+        if (steps.size > 0) {
+            val previousStep = steps.last()
+            selectedCellRow = previousStep.xIndex
+            selectedCellColumn = previousStep.yIndex
+        } else {
+            selectedCellRow = 0
+            selectedCellColumn = 0
+        }
 
         _uiState.update {
             it.copy(
@@ -324,6 +346,9 @@ class SudokuViewModel: ViewModel() {
                 stepsToGo = stepsToGo,
                 steps = steps,
                 hasSteps = steps.size > 0,
+                matrixWithNotes = gridWithNotes,
+                selectedCellRow = selectedCellRow,
+                selectedCellColumn = selectedCellColumn,
             )
         }
     }
@@ -336,18 +361,26 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    private fun recordStep() {
+    private fun recordStep(
+        cellWithNote: Array<MutableIntState>,
+        previousCellWithNote: Array<MutableIntState>,
+        cellDigit: Int?,
+        previousCellDigit: Int?,
+    ) {
         val steps = uiState.value.steps.toMutableList()
         val selectedCellRow = uiState.value.selectedCellRow
         val selectedCellColumn = uiState.value.selectedCellColumn
-        val grid = uiState.value.matrix
         steps.add(
             Step(
-                selectedCellRow,
-                selectedCellColumn,
-                grid[selectedCellRow][selectedCellColumn][2].intValue
+                xIndex = selectedCellRow,
+                yIndex = selectedCellColumn,
+                digit = if (cellDigit != 0) cellDigit else null,
+                previousDigit = if (cellDigit != 0) previousCellDigit else null,
+                previousNotes = previousCellWithNote,
+                notes = cellWithNote
             )
         )
+
         _uiState.update {
             it.copy(
                 steps = steps,
@@ -379,8 +412,9 @@ class SudokuViewModel: ViewModel() {
         val selectionNumbers = uiState.value.selectionNumbers
         var mistakesNum = uiState.value.mistakesNum
         var stepsToGo = uiState.value.stepsToGo
-
+        val previousCellDigit: Int?
         if (selectedDigit != 0 && grid[row][column][0].intValue == 0) {
+            previousCellDigit = grid[row][column][2].intValue
             if (grid[row][column][1].intValue != selectedDigit) {
                 mistakesNum++
             } else {
@@ -400,6 +434,13 @@ class SudokuViewModel: ViewModel() {
 
             grid[row][column][2].intValue = selectedDigit
 
+            recordStep(
+                cellDigit = selectedDigit,
+                previousCellDigit = previousCellDigit,
+                previousCellWithNote = uiState.value.matrixWithNotes[row][column],
+                cellWithNote = uiState.value.matrixWithNotes[row][column],
+            )
+
             _uiState.update {
                 it.copy(
                     matrix = grid,
@@ -415,11 +456,24 @@ class SudokuViewModel: ViewModel() {
         val gridWithNotes = uiState.value.matrixWithNotes
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
+        val previousCellWithNote = Array(9) { mutableIntStateOf(0) }
+
+        gridWithNotes[row][column].forEachIndexed { index, value ->
+            previousCellWithNote[index].intValue = value.intValue
+        }
+
         if (gridWithNotes[row][column][digit - 1].intValue == 0) {
             gridWithNotes[row][column][digit - 1].intValue = digit
         } else {
             gridWithNotes[row][column][digit - 1].intValue = 0
         }
+
+        recordStep(
+            cellWithNote = gridWithNotes[row][column],
+            previousCellWithNote = previousCellWithNote,
+            cellDigit = null,
+            previousCellDigit = null
+        )
 
         _uiState.update {
             it.copy(matrixWithNotes = gridWithNotes)
