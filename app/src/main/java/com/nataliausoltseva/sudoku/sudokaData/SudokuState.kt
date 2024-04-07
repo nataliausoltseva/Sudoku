@@ -20,6 +20,7 @@ data class SudokuState(
     val isRestartClicked: Boolean = false,
     val isNotesEnabled: Boolean = false,
     var matrixWithNotes: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) {  Array(9) { mutableIntStateOf(0) }  } },
+    val selectedDigit: Int = 0,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -43,6 +44,7 @@ data class SudokuState(
         if (isRestartClicked != other.isRestartClicked) return false
         if (isNotesEnabled != other.isNotesEnabled) return false
         if (!matrixWithNotes.contentDeepEquals(other.matrixWithNotes)) return false
+        if (selectedDigit != other.selectedDigit) return false
 
         return true
     }
@@ -64,6 +66,7 @@ data class SudokuState(
         result = 31 * result + isRestartClicked.hashCode()
         result = 31 * result + isNotesEnabled.hashCode()
         result = 31 * result + matrixWithNotes.contentDeepHashCode()
+        result = 31 * result + selectedDigit
         return result
     }
 }

@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
+import com.nataliausoltseva.sudoku.sudokaData.GRID_SIZE_SQUARE_ROOT
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
@@ -239,13 +240,36 @@ fun MainApp(
                                     showMistakes = settingsUIState.showMistakes,
                                     unlockedCell = sudokuUIState.unlockedCell,
                                     gridWithNotes = sudokuUIState.matrixWithNotes,
+                                    selectedDigit = sudokuUIState.selectedDigit,
+                                    onBoxCheck = { sudokuViewModel.isUnusedInBox(
+                                        sudokuUIState.selectedCellRow - sudokuUIState.selectedCellRow % GRID_SIZE_SQUARE_ROOT,
+                                        sudokuUIState.selectedCellColumn - sudokuUIState.selectedCellColumn % GRID_SIZE_SQUARE_ROOT,
+                                        sudokuUIState.selectedDigit,
+                                        sudokuUIState.matrix,
+                                        true
+                                    )},
+                                    onRowCheck = { sudokuViewModel.isUnusedInRow(
+                                        sudokuUIState.selectedCellRow,
+                                        sudokuUIState.selectedDigit,
+                                        sudokuUIState.matrix,
+                                        true
+                                    )},
+                                    onColumnCheck = { sudokuViewModel.isUnusedInColumn(
+                                        sudokuUIState.selectedCellColumn,
+                                        sudokuUIState.selectedDigit,
+                                        sudokuUIState.matrix,
+                                        true
+                                    )},
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled
                                 )
                                 val currentCell =sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2]
                                 SelectionNumbers(
                                     selectionNumbers = sudokuUIState.selectionNumbers,
-                                    onSelection = { sudokuViewModel.onSelection(it) },
+                                    onSelection = { digit: Int, canInsert: Boolean -> sudokuViewModel.onSelection(digit, canInsert) },
                                     cannotInsert = sudokuUIState.isNotesEnabled &&
-                                            currentCell.intValue != 0
+                                            currentCell.intValue != 0,
+                                    canInsert = { sudokuViewModel.canInsert(it) },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
                                 )
                                 Row (
                                     verticalAlignment = Alignment.CenterVertically
@@ -723,6 +747,11 @@ fun SudokuGrid(
     showMistakes: Boolean,
     unlockedCell: Array<Int?>,
     gridWithNotes: Array<Array<Array<MutableIntState>>>,
+    selectedDigit: Int,
+    onBoxCheck: () -> IntArray,
+    onRowCheck: () -> IntArray,
+    onColumnCheck: () -> IntArray,
+    isNotesEnabled: Boolean
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(9),
@@ -826,6 +855,27 @@ fun SudokuGrid(
                         }
                     }
 
+                    if (isNotesEnabled && selectedDigit != 0) {
+                        val repeatedInBox = onBoxCheck()
+                        val repeatedInRow = onRowCheck()
+                        val repeatedInColumn = onColumnCheck()
+
+                        if ((repeatedInBox.isNotEmpty() && rowIndex == repeatedInBox[0] && columnIndex == repeatedInBox[1]) ||
+                            (repeatedInRow.isNotEmpty() && rowIndex == repeatedInRow[0] && columnIndex == repeatedInRow[1]) ||
+                            (repeatedInColumn.isNotEmpty() && rowIndex == repeatedInColumn[0] && columnIndex == repeatedInColumn[1])
+                        ) {
+                            LaunchedEffect(true) {
+                                scale.animateTo(1f, animationSpec = tween(0))
+                                scale.animateTo(3f, animationSpec = tween(350))
+                                scale.animateTo(1f, animationSpec = tween(350))
+                            }
+                        } else {
+                            LaunchedEffect(true) {
+                                scale.animateTo(1f, animationSpec = tween(0))
+                            }
+                        }
+                    }
+
                     val gridWithNoteCell = gridWithNotes[rowIndex][columnIndex]
                     val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
                     if (hasNotesInCurrentCell && displayValue == "") {
@@ -907,22 +957,29 @@ fun Erase(
 @Composable
 fun SelectionNumbers(
     selectionNumbers: Array<Int>,
-    onSelection: (number: Int) -> Unit,
+    onSelection: (number: Int, canInsert: Boolean) -> Unit,
     cannotInsert: Boolean,
+    canInsert: (number: Int) -> Boolean,
+    isNotesEnabled: Boolean
 ) {
     val isClicked = remember { mutableStateOf(false) }
+    val isInsertable = remember { mutableStateOf(false) }
     fun onSelect(label: Int) {
+        isInsertable.value = canInsert(label)
         if (cannotInsert) {
             isClicked.value = true
         } else {
-            onSelection(label)
+            onSelection(label, isInsertable.value)
+            if (isNotesEnabled && !isInsertable.value) {
+                isClicked.value = true
+            }
         }
     }
 
     val context = LocalContext.current
     val vibrator = context.getSystemService(Vibrator::class.java)
     LaunchedEffect(isClicked.value) {
-        if (isClicked.value && cannotInsert) {
+        if (isClicked.value) {
             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
             isClicked.value = false
         }
