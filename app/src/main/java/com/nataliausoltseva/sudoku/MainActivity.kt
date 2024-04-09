@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val context = LocalContext.current
-            val settingsViewModel: SettingsViewModel =  remember { SettingsViewModel(context) }
+            val settingsViewModel = remember { SettingsViewModel(context) }
             val sudokuViewModel = remember { SudokuViewModel() }
             val timerViewModel = remember { TimerViewModel() }
             MainApp(settingsViewModel, sudokuViewModel, timerViewModel)
