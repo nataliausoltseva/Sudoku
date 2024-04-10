@@ -8,18 +8,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -229,6 +233,7 @@ fun MainApp(
                                 }
                             }
                             if (sudokuUIState.stepsToGo > 0) {
+                                println(IntrinsicSize.Max)
                                 SudokuGrid(
                                     grid = sudokuUIState.matrix,
                                     selectedCellRow = sudokuUIState.selectedCellRow,
@@ -753,172 +758,239 @@ fun SudokuGrid(
     onColumnCheck: () -> IntArray,
     isNotesEnabled: Boolean
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(9),
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.border(width = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant),
-        content = {
-            items(81) {index ->
-                val rowIndex = index / 9
-                val columnIndex = index % 9
-                val gridValue = grid[rowIndex][columnIndex][2].intValue
-                val cellRowIndex = index % 3
-                val isCurrentCell = selectedCellRow == rowIndex && selectedCellColumn == columnIndex
-                val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
-
-                val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
-                    else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
-                    else MaterialTheme.colorScheme.secondaryContainer
-
+    Box {
+        Column(
+            modifier = Modifier.border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline))
+        ) {
+            for (row in 0 until 9) {
+                val rowDividerColour = if (row % 3 != 0) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.outline
                 val outlineColour = MaterialTheme.colorScheme.inversePrimary
-
-                val columnDividerColour = if (cellRowIndex != 0) MaterialTheme.colorScheme.surface
-                    else MaterialTheme.colorScheme.outline
-
-                val rowDividerColour = if (rowIndex % 3 != 0) MaterialTheme.colorScheme.surface
-                    else MaterialTheme.colorScheme.outline
-
-                Column(
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
                         .drawBehind {
                             val canvasWidth = size.width
-                            val canvasHeight = size.height
-
-                            val hasVerticalOutline =
-                                selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
-                            val ignoreVerticalOutline = isCurrentCell ||
-                                    (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
-                            if (hasVerticalOutline && !ignoreVerticalOutline && hasRowHighlight) {
-                                drawLine(
-                                    start = Offset(x = 0f, y = canvasHeight),
-                                    end = Offset(x = 0f, y = 0f),
-                                    color = outlineColour,
-                                    strokeWidth = 4.dp.toPx()
-                                )
-                            } else {
-                                drawLine(
-                                    start = Offset(x = 0f, y = canvasHeight),
-                                    end = Offset(x = 0f, y = 0f),
-                                    color = columnDividerColour,
-                                    strokeWidth = 2.dp.toPx()
-                                )
-                            }
-
-                            val hasHorizontalOutline =
-                                selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
-                            val ignoreHorizontalOutline = isCurrentCell ||
-                                    (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
-                            if (hasHorizontalOutline && !ignoreHorizontalOutline && hasRowHighlight) {
-                                drawLine(
-                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
-                                    end = Offset(x = 0f, y = 0f),
-                                    color = outlineColour,
-                                    strokeWidth = 4.dp.toPx()
-                                )
-                            } else {
+                            if (row != 0) {
                                 drawLine(
                                     start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
                                     end = Offset(x = 0f, y = 0f),
                                     color = rowDividerColour,
-                                    strokeWidth = 2.dp.toPx()
+                                    strokeWidth = 1.dp.toPx()
                                 )
                             }
                         }
-                        .clickable { onSelectCell(rowIndex, columnIndex) }
-                        .background(backgroundCellColour)
-                ) {
-                    var displayValue = ""
-                    if (gridValue != 0 && !isPaused) {
-                        displayValue = gridValue.toString()
-                    }
-
-                    val expectedValue = grid[rowIndex][columnIndex][1].intValue
-                    val initialGridValue = grid[rowIndex][columnIndex][0].intValue
-
-                    val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
-                        else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
-                        else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.onSecondaryContainer
-
-                    val scale = remember { Animatable(1f) }
-                    val isUnlockedCell = unlockedCell[0] == rowIndex && unlockedCell[1] == columnIndex
-                    if (isUnlockedCell) {
-                        LaunchedEffect(true) {
-                            scale.animateTo(1f, animationSpec = tween(0))
-                            scale.animateTo(3f, animationSpec = tween(350))
-                            scale.animateTo(1f, animationSpec = tween(350))
+                ){
+                    for (index in 0 until 9) {
+                        val isCurrentCell = selectedCellRow == row && selectedCellColumn == index
+                        var displayValue = ""
+                        val gridValue = grid[row][index][2].intValue
+                        if (gridValue != 0 && !isPaused) {
+                            displayValue = gridValue.toString()
                         }
-                    } else {
-                        LaunchedEffect(true) {
-                            scale.animateTo(1f, animationSpec = tween(0))
-                        }
-                    }
 
-                    if (isNotesEnabled && selectedDigit != 0) {
-                        val repeatedInBox = onBoxCheck()
-                        val repeatedInRow = onRowCheck()
-                        val repeatedInColumn = onColumnCheck()
+                        val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
 
-                        if ((repeatedInBox.isNotEmpty() && rowIndex == repeatedInBox[0] && columnIndex == repeatedInBox[1]) ||
-                            (repeatedInRow.isNotEmpty() && rowIndex == repeatedInRow[0] && columnIndex == repeatedInRow[1]) ||
-                            (repeatedInColumn.isNotEmpty() && rowIndex == repeatedInColumn[0] && columnIndex == repeatedInColumn[1])
-                        ) {
-                            LaunchedEffect(true) {
-                                scale.animateTo(1f, animationSpec = tween(0))
-                                scale.animateTo(3f, animationSpec = tween(350))
-                                scale.animateTo(1f, animationSpec = tween(350))
-                            }
-                        } else {
-                            LaunchedEffect(true) {
-                                scale.animateTo(1f, animationSpec = tween(0))
-                            }
-                        }
-                    }
+                        val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
+                            else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
+                            else MaterialTheme.colorScheme.secondaryContainer
 
-                    val gridWithNoteCell = gridWithNotes[rowIndex][columnIndex]
-                    val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
-                    if (hasNotesInCurrentCell && displayValue == "") {
-                        var actualIndex = 0
-                        Column(
+                        val columnDividerColour = if (index % 3 == 0) MaterialTheme.colorScheme.outline
+                            else MaterialTheme.colorScheme.surface
+                        val hasVerticalOutline = index % 3 != 0 && (
+                            selectedCellColumn == index || selectedCellColumn == index - 1
+                        )
+
+                        Column (
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
-                                .padding(6.dp, 2.dp, 3.dp, 4.dp)
-                        ) {
-                            for (row in 0 until 3) {
-                                Row(
-                                    modifier = Modifier.height(19.dp)
-                                ) {
-                                    for (i in 0 until 3) {
-                                        val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
-                                            else gridWithNoteCell[actualIndex].intValue.toString()
-                                        Text(
-                                            text = noteDisplay,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.weight(1f)
+                                .width(45.dp)
+                                .height(45.dp)
+                                .background(backgroundCellColour)
+                                .clickable { onSelectCell(row, index) }
+                                .drawBehind {
+                                    if (index != 0) {
+                                        drawLine(
+                                            start = Offset(x = 0f, y = size.height),
+                                            end = Offset(x = 0f, y = 0f),
+                                            color = columnDividerColour,
+                                            strokeWidth = 1.dp.toPx()
                                         )
-                                        actualIndex++
                                     }
                                 }
-                            }
-                            actualIndex = 0
+                        ) {
+                            Text(
+                                text = displayValue,
+                            )
                         }
-                    } else {
-                        Text(
-                            text = displayValue,
-                            Modifier
-                                .padding(20.dp)
-                                .graphicsLayer {
-                                    scaleX = scale.value
-                                    scaleY = scale.value
-                                    transformOrigin = TransformOrigin.Center
-                                },
-                            color = colour
-                        )
                     }
                 }
             }
         }
-    )
+    }
+//    LazyVerticalGrid(
+//        columns = GridCells.Fixed(9),
+//        verticalArrangement = Arrangement.Center,
+//        modifier = Modifier.border(width = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant),
+//        content = {
+//            items(81) {index ->
+//                val rowIndex = index / 9
+//                val columnIndex = index % 9
+//                val gridValue = grid[rowIndex][columnIndex][2].intValue
+//                val cellRowIndex = index % 3
+//                val isCurrentCell = selectedCellRow == rowIndex && selectedCellColumn == columnIndex
+//                val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
+//
+//                val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
+//                    else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
+//                    else MaterialTheme.colorScheme.secondaryContainer
+//
+//                val outlineColour = MaterialTheme.colorScheme.inversePrimary
+//
+//                val columnDividerColour = if (cellRowIndex != 0) MaterialTheme.colorScheme.surface
+//                    else MaterialTheme.colorScheme.outline
+//
+//                val rowDividerColour = if (rowIndex % 3 != 0) MaterialTheme.colorScheme.surface
+//                    else MaterialTheme.colorScheme.outline
+//
+//                Column(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .drawBehind {
+//                            val canvasWidth = size.width
+//                            val canvasHeight = size.height
+//
+//                            val hasVerticalOutline =
+//                                selectedCellColumn == columnIndex || selectedCellColumn == columnIndex - 1
+//                            val ignoreVerticalOutline = isCurrentCell ||
+//                                    (selectedCellColumn + 1 == columnIndex && rowIndex == selectedCellRow)
+//                            if (hasVerticalOutline && !ignoreVerticalOutline && hasRowHighlight) {
+//                                drawLine(
+//                                    start = Offset(x = 0f, y = canvasHeight),
+//                                    end = Offset(x = 0f, y = 0f),
+//                                    color = outlineColour,
+//                                    strokeWidth = 4.dp.toPx()
+//                                )
+//                            } else {
+//                                drawLine(
+//                                    start = Offset(x = 0f, y = canvasHeight),
+//                                    end = Offset(x = 0f, y = 0f),
+//                                    color = columnDividerColour,
+//                                    strokeWidth = 2.dp.toPx()
+//                                )
+//                            }
+//
+//                            val hasHorizontalOutline =
+//                                selectedCellRow == rowIndex || selectedCellRow == rowIndex - 1
+//                            val ignoreHorizontalOutline = isCurrentCell ||
+//                                    (selectedCellRow + 1 == rowIndex && columnIndex == selectedCellColumn)
+//                            if (hasHorizontalOutline && !ignoreHorizontalOutline && hasRowHighlight) {
+//                                drawLine(
+//                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+//                                    end = Offset(x = 0f, y = 0f),
+//                                    color = outlineColour,
+//                                    strokeWidth = 4.dp.toPx()
+//                                )
+//                            } else {
+//                                drawLine(
+//                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
+//                                    end = Offset(x = 0f, y = 0f),
+//                                    color = rowDividerColour,
+//                                    strokeWidth = 2.dp.toPx()
+//                                )
+//                            }
+//                        }
+//                        .clickable { onSelectCell(rowIndex, columnIndex) }
+//                        .background(backgroundCellColour)
+//                ) {
+//                    var displayValue = ""
+//                    if (gridValue != 0 && !isPaused) {
+//                        displayValue = gridValue.toString()
+//                    }
+//
+//                    val expectedValue = grid[rowIndex][columnIndex][1].intValue
+//                    val initialGridValue = grid[rowIndex][columnIndex][0].intValue
+//
+//                    val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
+//                        else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
+//                        else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
+//                        else MaterialTheme.colorScheme.onSecondaryContainer
+//
+//                    val scale = remember { Animatable(1f) }
+//                    val isUnlockedCell = unlockedCell[0] == rowIndex && unlockedCell[1] == columnIndex
+//                    if (isUnlockedCell) {
+//                        LaunchedEffect(true) {
+//                            scale.animateTo(1f, animationSpec = tween(0))
+//                            scale.animateTo(3f, animationSpec = tween(350))
+//                            scale.animateTo(1f, animationSpec = tween(350))
+//                        }
+//                    } else {
+//                        LaunchedEffect(true) {
+//                            scale.animateTo(1f, animationSpec = tween(0))
+//                        }
+//                    }
+//
+//                    if (isNotesEnabled && selectedDigit != 0) {
+//                        val repeatedInBox = onBoxCheck()
+//                        val repeatedInRow = onRowCheck()
+//                        val repeatedInColumn = onColumnCheck()
+//
+//                        if ((repeatedInBox.isNotEmpty() && rowIndex == repeatedInBox[0] && columnIndex == repeatedInBox[1]) ||
+//                            (repeatedInRow.isNotEmpty() && rowIndex == repeatedInRow[0] && columnIndex == repeatedInRow[1]) ||
+//                            (repeatedInColumn.isNotEmpty() && rowIndex == repeatedInColumn[0] && columnIndex == repeatedInColumn[1])
+//                        ) {
+//                            LaunchedEffect(true) {
+//                                scale.animateTo(1f, animationSpec = tween(0))
+//                                scale.animateTo(3f, animationSpec = tween(350))
+//                                scale.animateTo(1f, animationSpec = tween(350))
+//                            }
+//                        } else {
+//                            LaunchedEffect(true) {
+//                                scale.animateTo(1f, animationSpec = tween(0))
+//                            }
+//                        }
+//                    }
+//
+//                    val gridWithNoteCell = gridWithNotes[rowIndex][columnIndex]
+//                    val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
+//                    if (hasNotesInCurrentCell && displayValue == "") {
+//                        var actualIndex = 0
+//                        Column(modifier = Modifier.padding(6.dp, 2.dp, 3.dp, 4.dp)) {
+//                            for (row in 0 until 3) {
+//                                Row(
+//                                    modifier = Modifier.height(19.dp)
+//                                ) {
+//                                    for (i in 0 until 3) {
+//                                        val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
+//                                            else gridWithNoteCell[actualIndex].intValue.toString()
+//                                        Text(
+//                                            text = noteDisplay,
+//                                            fontSize = 12.sp,
+//                                            modifier = Modifier.weight(1f)
+//                                        )
+//                                        actualIndex++
+//                                    }
+//                                }
+//                            }
+//                            actualIndex = 0
+//                        }
+//                    } else {
+//                        Text(
+//                            text = displayValue,
+//                            Modifier
+//                                .padding(20.dp)
+//                                .graphicsLayer {
+//                                    scaleX = scale.value
+//                                    scaleY = scale.value
+//                                    transformOrigin = TransformOrigin.Center
+//                                },
+//                            color = colour
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    )
 }
 
 @Composable
