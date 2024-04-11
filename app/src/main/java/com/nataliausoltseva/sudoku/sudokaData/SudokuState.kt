@@ -1,8 +1,10 @@
 package com.nataliausoltseva.sudoku.sudokaData
 
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableIntStateOf
 
+@Stable
 data class SudokuState(
     val hasStarted: Boolean = false,
     var matrix: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) {  Array(3) { mutableIntStateOf(0) } } },

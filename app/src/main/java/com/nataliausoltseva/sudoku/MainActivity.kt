@@ -71,13 +71,13 @@ import nl.dionsegijn.konfetti.compose.KonfettiView
 import nl.dionsegijn.konfetti.compose.OnParticleSystemUpdateListener
 import nl.dionsegijn.konfetti.core.PartySystem
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.sp
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(
     settingsViewModel: SettingsViewModel,
@@ -108,7 +109,6 @@ fun MainApp(
 ) {
     val sudokuUIState by sudokuViewModel.uiState.collectAsState()
     val settingsUIState by settingsViewModel.uiState.collectAsState()
-    val timer by timerViewModel.timer.collectAsState()
     val showSettings = remember { mutableStateOf(false) }
     val isRestartClicked = remember { mutableStateOf(false) }
 
@@ -139,7 +139,7 @@ fun MainApp(
                     EndScreen(
                         hasTimer = settingsUIState.hasTimer,
                         level = sudokuUIState.selectedLevel,
-                        formattedTime = timerViewModel.formatTime(timer),
+                        formattedTime = timerViewModel.getTimer(),
                         onRegenerate = { sudokuViewModel.onRegenerate() }
                     )
                     KonfettiUI()
@@ -218,22 +218,59 @@ fun MainApp(
                                     )
                                 }
                                 if (settingsUIState.hasTimer) {
-                                    Timer(
-                                        isPaused = sudokuUIState.isPaused,
-                                        onStartTimer = {
-                                            timerViewModel.startTimer()
-                                            sudokuViewModel.onStart()
-                                        },
-                                        formattedTime = timerViewModel.formatTime(timer),
-                                        onPauseTimer = {
-                                            timerViewModel.pauseTimer()
-                                            sudokuViewModel.onPause()
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Timer(timerViewModel)
+                                        Surface(
+                                            onClick = {
+                                                if (sudokuUIState.isPaused) {
+                                                    timerViewModel.pauseTimer()
+                                                    sudokuViewModel.onPause()
+                                                }
+                                            }
+                                        ) {
+                                            val icon = if (sudokuUIState.isPaused) Icons.Filled.PlayArrow
+                                            else Icons.Filled.Pause
+                                            val iconDescription = if (sudokuUIState.isPaused) "Play icon" else "Pause icon"
+                                            Icon(
+                                                icon,
+                                                contentDescription = iconDescription
+                                            )
                                         }
-                                    )
+                                    }
+
+                                    if (sudokuUIState.isPaused) {
+                                        BasicAlertDialog(
+                                            onDismissRequest = {},
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(MaterialTheme.colorScheme.onPrimary)
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier.padding(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Paused",
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                TextButton(
+                                                    onClick = {
+                                                        timerViewModel.startTimer()
+                                                        sudokuViewModel.onStart()
+                                                    },
+                                                    modifier = Modifier.padding(8.dp),
+                                                ) {
+                                                    Text("Continue")
+                                                }
+                                            }
+                                        }
+                                    }
+
                                 }
                             }
                             if (sudokuUIState.stepsToGo > 0) {
-                                println(IntrinsicSize.Max)
                                 SudokuGrid(
                                     grid = sudokuUIState.matrix,
                                     selectedCellRow = sudokuUIState.selectedCellRow,
@@ -686,57 +723,13 @@ fun Hints(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Timer(
-    isPaused: Boolean,
-    onStartTimer: () -> Unit,
-    formattedTime: String,
-    onPauseTimer: () -> Unit,
+    timerViewModel: TimerViewModel,
 ) {
-    if (isPaused) {
-        BasicAlertDialog(
-            onDismissRequest = {},
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.onPrimary)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(6.dp)
-            ) {
-                Text(
-                    text = "Paused",
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(
-                    onClick = {
-                        onStartTimer()
-                    },
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    Text("Continue")
-                }
-            }
-        }
-    }
-
+    val timer by timerViewModel.timer.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = formattedTime)
-        Surface(
-            onClick = {
-                if (!isPaused) {
-                    onPauseTimer()
-                }
-            }
-        ) {
-            val icon = if (isPaused) Icons.Filled.PlayArrow
-            else Icons.Filled.Pause
-            val iconDescription = if (isPaused) "Play icon" else "Pause icon"
-            Icon(
-                icon,
-                contentDescription = iconDescription
-            )
-        }
+        Text(text = timerViewModel.formatTime(timer))
     }
 }
 
@@ -796,9 +789,6 @@ fun SudokuGrid(
 
                         val columnDividerColour = if (index % 3 == 0) MaterialTheme.colorScheme.outline
                             else MaterialTheme.colorScheme.surface
-                        val hasVerticalOutline = index % 3 != 0 && (
-                            selectedCellColumn == index || selectedCellColumn == index - 1
-                        )
 
                         Column (
                             verticalArrangement = Arrangement.Center,
@@ -817,6 +807,29 @@ fun SudokuGrid(
                                             strokeWidth = 1.dp.toPx()
                                         )
                                     }
+                                    val hasVerticalOutline =
+                                        selectedCellColumn == index || selectedCellColumn == index - 1
+
+                                    if (hasVerticalOutline && hasRowHighlight) {
+                                        drawLine(
+                                            start = Offset(x = 0f, y = size.height),
+                                            end = Offset(x = 0f, y = 0f),
+                                            color = outlineColour,
+                                            strokeWidth = 2.dp.toPx()
+                                        )
+                                    }
+
+                                    val hasHorizontalOutline =
+                                        selectedCellRow == row || selectedCellRow == row - 1
+                                    if (hasHorizontalOutline && hasRowHighlight) {
+                                        drawLine(
+                                            start = Offset(x = size.width - 1.dp.toPx(), y = 0f),
+                                            end = Offset(x = 0f, y = 0f),
+                                            color = outlineColour,
+                                            strokeWidth = 2.dp.toPx()
+                                        )
+                                    }
+
                                 }
                         ) {
                             Text(
