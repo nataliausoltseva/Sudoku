@@ -239,6 +239,9 @@ class SudokuViewModel: ViewModel() {
                 steps = listOf(),
                 selectedCellRow = 0,
                 selectedCellColumn = 0,
+                isNotesEnabled = false,
+                matrixWithNotes = Array(9) { Array(9) { Array(9) { mutableIntStateOf(0) }  } },
+                selectedDigit = 0
             )
         }
         numToRemove = NUM_TO_REMOVE[index]

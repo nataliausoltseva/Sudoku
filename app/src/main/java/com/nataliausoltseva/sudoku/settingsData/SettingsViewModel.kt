@@ -43,9 +43,9 @@ class SettingsViewModel(
             )
         }
 
-//        viewModelScope.launch {
-//            saveTheme(theme)
-//        }
+        viewModelScope.launch {
+            saveTheme(theme)
+        }
     }
 
     private suspend fun readTheme(): String {
@@ -59,12 +59,12 @@ class SettingsViewModel(
     }
 
     init {
-//        viewModelScope.launch {
-//            _uiState.update {
-//                it.copy(
-//                    theme = readTheme()
-//                )
-//            }
-//        }
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    theme = readTheme()
+                )
+            }
+        }
     }
 }

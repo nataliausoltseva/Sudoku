@@ -21,7 +21,7 @@ data class SudokuState(
     val hasSteps: Boolean = false,
     val isRestartClicked: Boolean = false,
     val isNotesEnabled: Boolean = false,
-    var matrixWithNotes: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) {  Array(9) { mutableIntStateOf(0) }  } },
+    var matrixWithNotes: Array<Array<Array<MutableIntState>>> = Array(9) { Array(9) { Array(9) { mutableIntStateOf(0) }  } },
     val selectedDigit: Int = 0,
 ) {
     override fun equals(other: Any?): Boolean {
