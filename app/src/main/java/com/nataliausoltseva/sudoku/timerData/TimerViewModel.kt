@@ -44,6 +44,10 @@ class TimerViewModel: ViewModel() {
         return String.format("%02d:%02d:%02d", hours, minutes, remainingSeconds)
     }
 
+    fun getTimer(): String {
+        return formatTime(_timer.value)
+    }
+
     init {
         startTimer()
     }
