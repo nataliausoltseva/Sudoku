@@ -19,22 +19,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape //FIXME: replace with MaterialTheme.shapes.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Edit
@@ -59,35 +54,28 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
-import nl.dionsegijn.konfetti.compose.KonfettiView
-import nl.dionsegijn.konfetti.compose.OnParticleSystemUpdateListener
-import nl.dionsegijn.konfetti.core.PartySystem
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.em
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
@@ -96,7 +84,11 @@ import com.nataliausoltseva.sudoku.sudokaData.GRID_SIZE_SQUARE_ROOT
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
+import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
 import kotlinx.coroutines.delay
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.compose.OnParticleSystemUpdateListener
+import nl.dionsegijn.konfetti.core.PartySystem
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -209,6 +201,40 @@ fun MainApp(
                         vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
                     }
                 } else {
+                    if (showSettings.value) {
+                        Settings(
+                            onCancel = { showSettings.value = false },
+                            showMistakes = settingsUIState.showMistakes,
+                            hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                            hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                            hasRowHighlight = settingsUIState.hasRowHighlight,
+                            hasTimer = settingsUIState.hasTimer,
+                            theme = settingsUIState.theme,
+                            onSave = {
+                                    newShowMistakes: Boolean,
+                                    newHasMistakesCount: Boolean,
+                                    newTheme: String,
+                                    newHasHighlightSameNumbers: Boolean,
+                                    newHasRowHighlight: Boolean,
+                                    newHasTimer: Boolean,
+                                ->
+                                settingsViewModel.onSave(
+                                    newShowMistakes,
+                                    newHasMistakesCount,
+                                    newTheme,
+                                    newHasHighlightSameNumbers,
+                                    newHasRowHighlight,
+                                    newHasTimer
+                                )
+                                if (newHasTimer) {
+                                    timerViewModel.startTimer()
+                                } else {
+                                    timerViewModel.pauseTimer()
+                                }
+                            },
+                        )
+                    }
+
                     if (isLandscape) {
                         Row {
                             Row {
@@ -236,7 +262,7 @@ fun MainApp(
                                         )
                                     }
                                     Column {
-                                        Row (
+                                        Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
@@ -278,43 +304,8 @@ fun MainApp(
                                 }
                             }
                         }
-
-                        if (showSettings.value) {
-                            Settings(
-                                showSettings.value,
-                                onCancel = { showSettings.value = false },
-                                showMistakes = settingsUIState.showMistakes,
-                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
-                                hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                hasRowHighlight = settingsUIState.hasRowHighlight,
-                                hasTimer = settingsUIState.hasTimer,
-                                theme = settingsUIState.theme,
-                                onSave = {
-                                        newShowMistakes: Boolean,
-                                        newHasMistakesCount: Boolean,
-                                        newTheme: String,
-                                        newHasHighlightSameNumbers: Boolean,
-                                        newHasRowHighlight: Boolean,
-                                        newHasTimer: Boolean,
-                                    ->
-                                    settingsViewModel.onSave(
-                                        newShowMistakes,
-                                        newHasMistakesCount,
-                                        newTheme,
-                                        newHasHighlightSameNumbers,
-                                        newHasRowHighlight,
-                                        newHasTimer
-                                    )
-                                    if (newHasTimer) {
-                                        timerViewModel.startTimer()
-                                    } else {
-                                        timerViewModel.pauseTimer()
-                                    }
-                                },
-                            )
-                        }
                     } else {
-                        Column (
+                        Column(
                             horizontalAlignment = Alignment.End
                         ) {
                             SettingsBar(onShowSettings = { showSettings.value = true }) {
@@ -323,11 +314,11 @@ fun MainApp(
                                     isRestartClicked.value = true
                                 })
                             }
-                            Column (
+                            Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 if (sudokuUIState.stepsToGo > 0) {
-                                    Row (
+                                    Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
@@ -380,41 +371,6 @@ fun MainApp(
                                     }
                                 }
                             }
-                        }
-
-                        if (showSettings.value) {
-                            Settings(
-                                showSettings.value,
-                                onCancel = { showSettings.value = false },
-                                showMistakes = settingsUIState.showMistakes,
-                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
-                                hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                hasRowHighlight = settingsUIState.hasRowHighlight,
-                                hasTimer = settingsUIState.hasTimer,
-                                theme = settingsUIState.theme,
-                                onSave = {
-                                        newShowMistakes: Boolean,
-                                        newHasMistakesCount: Boolean,
-                                        newTheme: String,
-                                        newHasHighlightSameNumbers: Boolean,
-                                        newHasRowHighlight: Boolean,
-                                        newHasTimer: Boolean,
-                                    ->
-                                    settingsViewModel.onSave(
-                                        newShowMistakes,
-                                        newHasMistakesCount,
-                                        newTheme,
-                                        newHasHighlightSameNumbers,
-                                        newHasRowHighlight,
-                                        newHasTimer
-                                    )
-                                    if (newHasTimer) {
-                                        timerViewModel.startTimer()
-                                    } else {
-                                        timerViewModel.pauseTimer()
-                                    }
-                                },
-                            )
                         }
                     }
                 }
@@ -473,10 +429,10 @@ fun WelcomeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    Surface(
+                    Surface( //FIXME: use an IconButton
                         onClick = { onDismiss() }
                     ) {
-                        Icon (
+                        Icon(
                             Icons.Outlined.Close,
                             contentDescription = "Close icon"
                         )
@@ -538,7 +494,6 @@ fun EndScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(
-    showSettings: Boolean,
     onCancel: () -> Unit,
     showMistakes: Boolean,
     hasMistakeCounter: Boolean,
@@ -549,7 +504,7 @@ fun Settings(
     onSave: (
         showMistakes: Boolean,
         hasMistakesCount: Boolean,
-        theme:String,
+        theme: String,
         hasHighlightSameNumbers: Boolean,
         hasRowHighlight: Boolean,
         hasTimer: Boolean,
@@ -562,148 +517,152 @@ fun Settings(
     val newHasTimer = remember { mutableStateOf(hasTimer) }
     val newHasHighlightSameNumbers = remember { mutableStateOf(hasHighlightSameNumbers) }
 
-    if (showSettings) {
-        BasicAlertDialog(
-            onDismissRequest = {},
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.onPrimary)
+    BasicAlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.onPrimary)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(6.dp)
         ) {
-            Column (
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(6.dp)
+            Column(
+                horizontalAlignment = Alignment.Start,
             ) {
-                Column (
-                    horizontalAlignment = Alignment.Start,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                    Text(text = "Show mistakes")
+                    Switch(
+                        checked = newShowMistakes.value,
+                        onCheckedChange = { isChecked -> newShowMistakes.value = isChecked })
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    Text(text = "Count mistakes")
+                    Switch(
+                        checked = newHasMistakeCounter.value,
+                        onCheckedChange = { isChecked -> newHasMistakeCounter.value = isChecked }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    Text(text = "Highlight Same Numbers")
+                    Switch(
+                        checked = newHasHighlightSameNumbers.value,
+                        onCheckedChange = { isChecked ->
+                            newHasHighlightSameNumbers.value = isChecked
+                        }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    Text(text = "Highlight Rows")
+                    Switch(
+                        checked = newHasRowHighlight.value,
+                        onCheckedChange = { isChecked -> newHasRowHighlight.value = isChecked }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    Text(text = "Include Timer")
+                    Switch(
+                        checked = newHasTimer.value,
+                        onCheckedChange = { isChecked -> newHasTimer.value = isChecked }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    val isExpanded = remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = isExpanded.value,
+                        onExpandedChange = { isExpanded.value = !isExpanded.value }
                     ) {
-                        Text(text = "Show mistakes")
-                        Switch(checked = newShowMistakes.value, onCheckedChange = { isChecked -> newShowMistakes.value = isChecked })
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                    ) {
-                        Text(text = "Count mistakes")
-                        Switch(
-                            checked = newHasMistakeCounter.value,
-                            onCheckedChange = { isChecked -> newHasMistakeCounter.value = isChecked}
+                        OutlinedTextField(
+                            readOnly = true,
+                            value = newTheme.value,
+                            onValueChange = {},
+                            label = { Text(text = "Theme") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded.value)
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
                         )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                    ) {
-                        Text(text = "Highlight Same Numbers")
-                        Switch(
-                            checked = newHasHighlightSameNumbers.value,
-                            onCheckedChange = { isChecked -> newHasHighlightSameNumbers.value = isChecked}
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                    ) {
-                        Text(text = "Highlight Rows")
-                        Switch(
-                            checked = newHasRowHighlight.value,
-                            onCheckedChange = { isChecked -> newHasRowHighlight.value = isChecked}
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                    ) {
-                        Text(text = "Include Timer")
-                        Switch(
-                            checked = newHasTimer.value,
-                            onCheckedChange = { isChecked -> newHasTimer.value = isChecked}
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                    ) {
-                        val isExpanded = remember{ mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = isExpanded.value,
-                            onExpandedChange = { isExpanded.value = !isExpanded.value }
-                        ) {
-                            OutlinedTextField(
-                                readOnly = true,
-                                value = newTheme.value,
-                                onValueChange = {},
-                                label = { Text(text = "Theme") },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded.value)
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(),
-                                modifier = Modifier
-                                    .menuAnchor()
-                                    .fillMaxWidth()
-                            )
 
-                            ExposedDropdownMenu(expanded = isExpanded.value, onDismissRequest = { isExpanded.value = false }) {
-                                for (i in THEMES.indices) {
-                                    DropdownMenuItem(
-                                        text = { 
-                                            Text(text = THEMES[i])
-                                        },
-                                        onClick = {
-                                            newTheme.value = THEMES[i]
-                                            isExpanded.value = false
-                                        },
-                                    )
-                                }
+                        ExposedDropdownMenu(
+                            expanded = isExpanded.value,
+                            onDismissRequest = { isExpanded.value = false }) {
+                            for (i in THEMES.indices) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(text = THEMES[i])
+                                    },
+                                    onClick = {
+                                        newTheme.value = THEMES[i]
+                                        isExpanded.value = false
+                                    },
+                                )
                             }
                         }
                     }
-
                 }
-                Row {
-                    TextButton(
-                        onClick = { onCancel() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Cancel")
-                    }
-                    TextButton(
-                        onClick = {
-                            onSave(
-                                newShowMistakes.value,
-                                newHasMistakeCounter.value,
-                                newTheme.value,
-                                newHasHighlightSameNumbers.value,
-                                newHasRowHighlight.value,
-                                newHasTimer.value,
-                            )
-                            onCancel()
-                        },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Save")
-                    }
+
+            }
+            Row {
+                TextButton(
+                    onClick = { onCancel() },
+                    modifier = Modifier.padding(8.dp),
+                ) {
+                    Text("Cancel")
+                }
+                TextButton(
+                    onClick = {
+                        onSave(
+                            newShowMistakes.value,
+                            newHasMistakeCounter.value,
+                            newTheme.value,
+                            newHasHighlightSameNumbers.value,
+                            newHasRowHighlight.value,
+                            newHasTimer.value,
+                        )
+                        onCancel()
+                    },
+                    modifier = Modifier.padding(8.dp),
+                ) {
+                    Text("Save")
                 }
             }
         }
@@ -760,7 +719,7 @@ fun MistakeCounter(
 }
 
 @Composable
-fun Hints(
+fun HintsButton(
     useHint: () -> Unit,
     hintNum: Int,
 ) {
@@ -770,7 +729,7 @@ fun Hints(
             modifier = Modifier.padding(8.dp),
             enabled = hintNum > 0,
         ) {
-            Icon (
+            Icon(
                 Icons.Rounded.Lightbulb,
                 contentDescription = "Hint icon"
             )
@@ -790,7 +749,6 @@ fun Hints(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Timer(
     timerViewModel: TimerViewModel,
@@ -827,7 +785,7 @@ fun SudokuGrid(
         ) {
             for (row in 0 until 9) {
                 val rowDividerColour = if (row % 3 != 0) MaterialTheme.colorScheme.surface
-                        else MaterialTheme.colorScheme.outline
+                else MaterialTheme.colorScheme.outline
                 val outlineColour = MaterialTheme.colorScheme.inversePrimary
                 Row {
                     for (index in 0 until 9) {
@@ -937,11 +895,11 @@ fun SudokuGrid(
                             val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
                             if (hasNotesInCurrentCell && displayValue == "" && !isPaused) {
                                 var actualIndex = 0
-                                Column (
+                                Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                     modifier = Modifier.size(cellSize)
-                                ){
+                                ) {
                                     for (rowIndex in 0 until 3) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -970,7 +928,7 @@ fun SudokuGrid(
                             } else {
                                 val expectedValue = grid[row][index][1].intValue
                                 val initialGridValue = grid[row][index][0].intValue
-                                val colour =  if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
+                                val colour = if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
                                     else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
                                     else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
                                     else MaterialTheme.colorScheme.onSecondaryContainer
@@ -997,10 +955,10 @@ fun SudokuGrid(
 fun RestartButton(
     onRestart: () -> Unit,
 ) {
-    Surface(
+    Surface( //FIXME: use an IconButton
         onClick = { onRestart() }
     ) {
-        Icon (
+        Icon(
             Icons.Rounded.Refresh,
             contentDescription = "Refresh icon"
         )
@@ -1008,14 +966,14 @@ fun RestartButton(
 }
 
 @Composable
-fun Erase(
+fun EraseButton(
     onErase: () -> Unit
 ) {
     Button(
         onClick = { onErase() },
         modifier = Modifier.padding(8.dp),
     ) {
-        Icon (
+        Icon(
             Icons.Rounded.Delete,
             contentDescription = "Icon to clear a cell"
         )
@@ -1053,7 +1011,7 @@ fun SelectionNumbers(
         }
     }
 
-    LazyVerticalGrid(
+    LazyVerticalGrid( //FIXME: use a row
         columns = GridCells.Fixed(9),
         modifier = Modifier.padding(0.dp, 16.dp, 0.dp, 0.dp),
         content = {
@@ -1065,7 +1023,7 @@ fun SelectionNumbers(
                     labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                 }
 
-                Surface(
+                Surface( //FIXME: use an TextButton
                     onClick = { onSelect(label) },
                     enabled = isAvailable,
                 ) {
@@ -1090,8 +1048,8 @@ fun UndoButton(
         onClick = { onUndo() },
         enabled = isEnabled,
         modifier = Modifier.padding(8.dp),
-        ) {
-        Icon (
+    ) {
+        Icon(
             Icons.AutoMirrored.Filled.Undo,
             contentDescription = "Undo icon"
         )
@@ -1107,7 +1065,7 @@ fun NotesButton(
         onClick = { onNote() },
         modifier = Modifier.padding(8.dp)
     ) {
-        Icon (
+        Icon(
             Icons.Filled.Edit,
             contentDescription = "Notes button",
             tint = if (isActive) Color.Green else Color.Unspecified
@@ -1118,13 +1076,13 @@ fun NotesButton(
 @Composable
 fun SettingsBar(
     onShowSettings: () -> Unit,
-    content: @Composable() () -> Unit,
+    restartButton: @Composable () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
-        content()
-        Surface(
+        restartButton()
+        Surface( //FIXME: use an IconButton
             onClick = { onShowSettings() },
             modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
         ) {
@@ -1137,7 +1095,7 @@ fun SettingsBar(
 }
 
 @Composable
-fun GridActions(
+fun GridActions( //FIXME: Make this just have 2 @Composable parameters
     currentCell: Int,
     selectionNumbers: Array<Int>,
     onSelection: (digit: Int, canInsert: Boolean) -> Unit,
@@ -1153,20 +1111,19 @@ fun GridActions(
     SelectionNumbers(
         selectionNumbers = selectionNumbers,
         onSelection = { digit: Int, isInsertable: Boolean -> onSelection(digit, isInsertable) },
-        cannotInsert = isNotesEnabled &&
-                currentCell != 0,
+        cannotInsert = isNotesEnabled && currentCell != 0,
         canInsert = { canInsert(it) },
         isNotesEnabled = isNotesEnabled,
     )
-    Row (
+    Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         UndoButton(hasSteps, onUndo = { onUndo() })
-        Erase(onErase = { onErase() })
+        EraseButton(onErase = { onErase() })
         NotesButton(isNotesEnabled, onNote = { onNote() })
-        Hints(
+        HintsButton(
             useHint = { useHint() },
             hintNum = hintNum
         )
@@ -1196,7 +1153,7 @@ fun GameIndications(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Timer(timerViewModel)
-            Surface(
+            Surface( //FIXME: use an IconButton
                 onClick = { onPause() }
             ) {
                 val icon =
