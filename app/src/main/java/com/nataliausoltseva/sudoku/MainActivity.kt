@@ -128,14 +128,14 @@ fun MainApp(
     timerViewModel: TimerViewModel,
     isLandscape: Boolean,
 ) {
-    val sudokuUIState = sudokuViewModel.uiState.collectAsState()
-    val settingsUIState = settingsViewModel.uiState.collectAsState()
+    val sudokuUIState by sudokuViewModel.uiState.collectAsState()
+    val settingsUIState by settingsViewModel.uiState.collectAsState()
     val showSettings = remember { mutableStateOf(false) }
     val isRestartClicked = remember { mutableStateOf(false) }
 
     val view = LocalView.current
-    LaunchedEffect(sudokuUIState.value.mistakesNum) {
-        if (sudokuUIState.value.mistakesNum > 0) {
+    LaunchedEffect(sudokuUIState.mistakesNum) {
+        if (sudokuUIState.mistakesNum > 0) {
             view.performHapticFeedback(HapticFeedbackConstants.REJECT)
         }
     }
@@ -144,10 +144,10 @@ fun MainApp(
     val vibrator = context.getSystemService(Vibrator::class.java)
 
     SudokuTheme(
-        darkTheme = settingsUIState.value.theme == "dark" || (settingsUIState.value.theme == "system" && isSystemInDarkTheme())
+        darkTheme = settingsUIState.theme == "dark" || (settingsUIState.theme == "system" && isSystemInDarkTheme())
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (sudokuUIState.value.isPaused) {
+            if (sudokuUIState.isPaused) {
                 BasicAlertDialog(
                     onDismissRequest = {},
                     modifier = Modifier
@@ -175,7 +175,7 @@ fun MainApp(
                 }
             }
 
-            if (!sudokuUIState.value.hasStarted || isRestartClicked.value) {
+            if (!sudokuUIState.hasStarted || isRestartClicked.value) {
                 WelcomeDialog(
                     onStartGame = {
                         sudokuViewModel.onStart(it)
@@ -190,11 +190,11 @@ fun MainApp(
                     hasClosingButton = isRestartClicked.value,
                 )
             } else {
-                if (sudokuUIState.value.stepsToGo == 0) {
+                if (sudokuUIState.stepsToGo == 0) {
                     timerViewModel.pauseTimer()
                     EndScreen(
-                        hasTimer = settingsUIState.value.hasTimer,
-                        level = sudokuUIState.value.selectedLevel,
+                        hasTimer = settingsUIState.hasTimer,
+                        level = sudokuUIState.selectedLevel,
                         formattedTime = timerViewModel.getTimer(),
                         onRegenerate = { sudokuViewModel.onRegenerate() }
                     )
@@ -212,43 +212,27 @@ fun MainApp(
                     if (isLandscape) {
                         Row {
                             Row {
-                                if (sudokuUIState.value.stepsToGo > 0) {
+                                if (sudokuUIState.stepsToGo > 0) {
                                     Column(
                                         modifier = Modifier.fillMaxHeight(),
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         SudokuGrid(
-                                            grid = sudokuUIState.value.matrix,
-                                            selectedCellRow = sudokuUIState.value.selectedCellRow,
-                                            selectedCellColumn = sudokuUIState.value.selectedCellColumn,
-                                            hasHighlightSameNumbers = settingsUIState.value.hasHighlightSameNumbers,
+                                            grid = sudokuUIState.matrix,
+                                            selectedCellRow = sudokuUIState.selectedCellRow,
+                                            selectedCellColumn = sudokuUIState.selectedCellColumn,
+                                            hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
                                             onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
-                                            hasRowHighlight = settingsUIState.value.hasRowHighlight,
-                                            isPaused = sudokuUIState.value.isPaused,
-                                            showMistakes = settingsUIState.value.showMistakes,
-                                            unlockedCell = sudokuUIState.value.unlockedCell,
-                                            gridWithNotes = sudokuUIState.value.matrixWithNotes,
-                                            selectedDigit = sudokuUIState.value.selectedDigit,
-                                            onBoxCheck = { sudokuViewModel.isUnusedInBox(
-                                                sudokuUIState.value.selectedCellRow - sudokuUIState.value.selectedCellRow % GRID_SIZE_SQUARE_ROOT,
-                                                sudokuUIState.value.selectedCellColumn - sudokuUIState.value.selectedCellColumn % GRID_SIZE_SQUARE_ROOT,
-                                                sudokuUIState.value.selectedDigit,
-                                                sudokuUIState.value.matrix,
-                                                true
-                                            )},
-                                            onRowCheck = { sudokuViewModel.isUnusedInRow(
-                                                sudokuUIState.value.selectedCellRow,
-                                                sudokuUIState.value.selectedDigit,
-                                                sudokuUIState.value.matrix,
-                                                true
-                                            )},
-                                            onColumnCheck = { sudokuViewModel.isUnusedInColumn(
-                                                sudokuUIState.value.selectedCellColumn,
-                                                sudokuUIState.value.selectedDigit,
-                                                sudokuUIState.value.matrix,
-                                                true
-                                            )},
-                                            isNotesEnabled = sudokuUIState.value.isNotesEnabled
+                                            hasRowHighlight = settingsUIState.hasRowHighlight,
+                                            isPaused = sudokuUIState.isPaused,
+                                            showMistakes = settingsUIState.showMistakes,
+                                            unlockedCell = sudokuUIState.unlockedCell,
+                                            gridWithNotes = sudokuUIState.matrixWithNotes,
+                                            selectedDigit = sudokuUIState.selectedDigit,
+                                            onBoxCheck = { sudokuViewModel.isUnusedInBox() },
+                                            onRowCheck = { sudokuViewModel.isUnusedInRow() },
+                                            onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
+                                            isNotesEnabled = sudokuUIState.isNotesEnabled
                                         )
                                     }
                                     Column {
@@ -259,12 +243,12 @@ fun MainApp(
                                         ) {
                                             GameIndications(
                                                 timerViewModel = timerViewModel,
-                                                selectedLevel = sudokuUIState.value.selectedLevel,
-                                                hasMistakeCounter = settingsUIState.value.hasMistakeCounter,
-                                                mistakesNum = sudokuUIState.value.mistakesNum,
+                                                selectedLevel = sudokuUIState.selectedLevel,
+                                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                                                mistakesNum = sudokuUIState.mistakesNum,
                                                 onRegenerate = { sudokuViewModel.onRegenerate() },
-                                                hasTimer = settingsUIState.value.hasTimer,
-                                                isPaused = sudokuUIState.value.isPaused,
+                                                hasTimer = settingsUIState.hasTimer,
+                                                isPaused = sudokuUIState.isPaused,
                                                 onPause = {
                                                     sudokuViewModel.onPause()
                                                     timerViewModel.pauseTimer()
@@ -278,17 +262,17 @@ fun MainApp(
                                             }
                                         }
                                         GridActions(
-                                            currentCell = sudokuUIState.value.matrix[sudokuUIState.value.selectedCellRow][sudokuUIState.value.selectedCellColumn][2].intValue,
-                                            selectionNumbers = sudokuUIState.value.selectionNumbers,
+                                            currentCell = sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue,
+                                            selectionNumbers = sudokuUIState.selectionNumbers,
                                             onSelection = { digit: Int, canInsert: Boolean -> sudokuViewModel.onSelection(digit, canInsert) },
-                                            isNotesEnabled = sudokuUIState.value.isNotesEnabled,
+                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
                                             canInsert = { sudokuViewModel.canInsert(it) },
-                                            hasSteps = sudokuUIState.value.hasSteps,
+                                            hasSteps = sudokuUIState.hasSteps,
                                             onUndo = { sudokuViewModel.onUndo() },
                                             onErase = { sudokuViewModel.onErase() },
                                             onNote = { sudokuViewModel.onNote() },
                                             useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.value.hintNum,
+                                            hintNum = sudokuUIState.hintNum,
                                         )
                                     }
                                 }
@@ -299,12 +283,12 @@ fun MainApp(
                             Settings(
                                 showSettings.value,
                                 onCancel = { showSettings.value = false },
-                                showMistakes = settingsUIState.value.showMistakes,
-                                hasMistakeCounter = settingsUIState.value.hasMistakeCounter,
-                                hasHighlightSameNumbers = settingsUIState.value.hasHighlightSameNumbers,
-                                hasRowHighlight = settingsUIState.value.hasRowHighlight,
-                                hasTimer = settingsUIState.value.hasTimer,
-                                theme = settingsUIState.value.theme,
+                                showMistakes = settingsUIState.showMistakes,
+                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                                hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                                hasRowHighlight = settingsUIState.hasRowHighlight,
+                                hasTimer = settingsUIState.hasTimer,
+                                theme = settingsUIState.theme,
                                 onSave = {
                                         newShowMistakes: Boolean,
                                         newHasMistakesCount: Boolean,
@@ -342,7 +326,7 @@ fun MainApp(
                             Column (
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                if (sudokuUIState.value.stepsToGo > 0) {
+                                if (sudokuUIState.stepsToGo > 0) {
                                     Row (
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -350,12 +334,12 @@ fun MainApp(
                                     ) {
                                         GameIndications(
                                             timerViewModel = timerViewModel,
-                                            selectedLevel = sudokuUIState.value.selectedLevel,
-                                            hasMistakeCounter = settingsUIState.value.hasMistakeCounter,
-                                            mistakesNum = sudokuUIState.value.mistakesNum,
+                                            selectedLevel = sudokuUIState.selectedLevel,
+                                            hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                                            mistakesNum = sudokuUIState.mistakesNum,
                                             onRegenerate = { sudokuViewModel.onRegenerate() },
-                                            hasTimer = settingsUIState.value.hasTimer,
-                                            isPaused = sudokuUIState.value.isPaused,
+                                            hasTimer = settingsUIState.hasTimer,
+                                            isPaused = sudokuUIState.isPaused,
                                             onPause = {
                                                 sudokuViewModel.onPause()
                                                 timerViewModel.pauseTimer()
@@ -363,51 +347,35 @@ fun MainApp(
                                         )
                                     }
                                     SudokuGrid(
-                                        grid = sudokuUIState.value.matrix,
-                                        selectedCellRow = sudokuUIState.value.selectedCellRow,
-                                        selectedCellColumn = sudokuUIState.value.selectedCellColumn,
-                                        hasHighlightSameNumbers = settingsUIState.value.hasHighlightSameNumbers,
+                                        grid = sudokuUIState.matrix,
+                                        selectedCellRow = sudokuUIState.selectedCellRow,
+                                        selectedCellColumn = sudokuUIState.selectedCellColumn,
+                                        hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
                                         onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
-                                        hasRowHighlight = settingsUIState.value.hasRowHighlight,
-                                        isPaused = sudokuUIState.value.isPaused,
-                                        showMistakes = settingsUIState.value.showMistakes,
-                                        unlockedCell = sudokuUIState.value.unlockedCell,
-                                        gridWithNotes = sudokuUIState.value.matrixWithNotes,
-                                        selectedDigit = sudokuUIState.value.selectedDigit,
-                                        onBoxCheck = { sudokuViewModel.isUnusedInBox(
-                                            sudokuUIState.value.selectedCellRow - sudokuUIState.value.selectedCellRow % GRID_SIZE_SQUARE_ROOT,
-                                            sudokuUIState.value.selectedCellColumn - sudokuUIState.value.selectedCellColumn % GRID_SIZE_SQUARE_ROOT,
-                                            sudokuUIState.value.selectedDigit,
-                                            sudokuUIState.value.matrix,
-                                            true
-                                        )},
-                                        onRowCheck = { sudokuViewModel.isUnusedInRow(
-                                            sudokuUIState.value.selectedCellRow,
-                                            sudokuUIState.value.selectedDigit,
-                                            sudokuUIState.value.matrix,
-                                            true
-                                        )},
-                                        onColumnCheck = { sudokuViewModel.isUnusedInColumn(
-                                            sudokuUIState.value.selectedCellColumn,
-                                            sudokuUIState.value.selectedDigit,
-                                            sudokuUIState.value.matrix,
-                                            true
-                                        )},
-                                        isNotesEnabled = sudokuUIState.value.isNotesEnabled
+                                        hasRowHighlight = settingsUIState.hasRowHighlight,
+                                        isPaused = sudokuUIState.isPaused,
+                                        showMistakes = settingsUIState.showMistakes,
+                                        unlockedCell = sudokuUIState.unlockedCell,
+                                        gridWithNotes = sudokuUIState.matrixWithNotes,
+                                        selectedDigit = sudokuUIState.selectedDigit,
+                                        onBoxCheck = { sudokuViewModel.isUnusedInBox() },
+                                        onRowCheck = { sudokuViewModel.isUnusedInRow() },
+                                        onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
+                                        isNotesEnabled = sudokuUIState.isNotesEnabled
                                     )
                                     Column {
                                         GridActions(
-                                            currentCell = sudokuUIState.value.matrix[sudokuUIState.value.selectedCellRow][sudokuUIState.value.selectedCellColumn][2].intValue,
-                                            selectionNumbers = sudokuUIState.value.selectionNumbers,
+                                            currentCell = sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue,
+                                            selectionNumbers = sudokuUIState.selectionNumbers,
                                             onSelection = { digit: Int, canInsert: Boolean -> sudokuViewModel.onSelection(digit, canInsert) },
-                                            isNotesEnabled = sudokuUIState.value.isNotesEnabled,
+                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
                                             canInsert = { sudokuViewModel.canInsert(it) },
-                                            hasSteps = sudokuUIState.value.hasSteps,
+                                            hasSteps = sudokuUIState.hasSteps,
                                             onUndo = { sudokuViewModel.onUndo() },
                                             onErase = { sudokuViewModel.onErase() },
                                             onNote = { sudokuViewModel.onNote() },
                                             useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.value.hintNum,
+                                            hintNum = sudokuUIState.hintNum,
                                         )
                                     }
                                 }
@@ -418,12 +386,12 @@ fun MainApp(
                             Settings(
                                 showSettings.value,
                                 onCancel = { showSettings.value = false },
-                                showMistakes = settingsUIState.value.showMistakes,
-                                hasMistakeCounter = settingsUIState.value.hasMistakeCounter,
-                                hasHighlightSameNumbers = settingsUIState.value.hasHighlightSameNumbers,
-                                hasRowHighlight = settingsUIState.value.hasRowHighlight,
-                                hasTimer = settingsUIState.value.hasTimer,
-                                theme = settingsUIState.value.theme,
+                                showMistakes = settingsUIState.showMistakes,
+                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                                hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                                hasRowHighlight = settingsUIState.hasRowHighlight,
+                                hasTimer = settingsUIState.hasTimer,
+                                theme = settingsUIState.theme,
                                 onSave = {
                                         newShowMistakes: Boolean,
                                         newHasMistakesCount: Boolean,
@@ -861,20 +829,7 @@ fun SudokuGrid(
                 val rowDividerColour = if (row % 3 != 0) MaterialTheme.colorScheme.surface
                         else MaterialTheme.colorScheme.outline
                 val outlineColour = MaterialTheme.colorScheme.inversePrimary
-                Row(
-                    modifier = Modifier
-                        .drawBehind {
-                            val canvasWidth = size.width
-//                            if (row != 0) {
-//                                drawLine(
-//                                    start = Offset(x = canvasWidth - 1.dp.toPx(), y = 0f),
-//                                    end = Offset(x = 0f, y = 0f),
-//                                    color = rowDividerColour,
-//                                    strokeWidth = 1.dp.toPx()
-//                                )
-//                            }
-                        }
-                ){
+                Row {
                     for (index in 0 until 9) {
                         val isCurrentCell = selectedCellRow == row && selectedCellColumn == index
                         var displayValue = ""

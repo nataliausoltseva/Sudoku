@@ -50,14 +50,20 @@ class SudokuViewModel: ViewModel() {
             for (j in 0 until GRID_SIZE_SQUARE_ROOT) {
                 do {
                     generatedDigit = getRandomNumber(GRID_SIZE)
-                } while (isUnusedInBox(row, column, generatedDigit, grid).isNotEmpty())
+                } while (isUnusedInBox(row, column, generatedDigit, grid, false).isNotEmpty())
 
                 grid[row + i][column + j] = Array(3) { mutableIntStateOf(generatedDigit) }
             }
         }
     }
 
-    fun isUnusedInBox(rowStart: Int, columnStart: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>, useUserGrid: Boolean = false): IntArray {
+    fun isUnusedInBox(
+        rowStart: Int = uiState.value.selectedCellRow - uiState.value.selectedCellRow % GRID_SIZE_SQUARE_ROOT,
+        columnStart: Int = uiState.value.selectedCellColumn - uiState.value.selectedCellColumn  % GRID_SIZE_SQUARE_ROOT,
+        digit: Int = uiState.value.selectedDigit,
+        grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
+        useUserGrid: Boolean = true
+    ): IntArray {
         for (i in 0 until GRID_SIZE_SQUARE_ROOT) {
             for (j in 0 until GRID_SIZE_SQUARE_ROOT) {
                 if ((useUserGrid && grid[rowStart + i][columnStart + j][2].intValue == digit ) ||
@@ -126,7 +132,12 @@ class SudokuViewModel: ViewModel() {
                 ).isEmpty()
     }
 
-    fun isUnusedInRow(row: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>, useUserGrid: Boolean) : IntArray {
+    fun isUnusedInRow(
+        row: Int = uiState.value.selectedCellRow,
+        digit: Int = uiState.value.selectedDigit,
+        grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
+        useUserGrid: Boolean = true
+    ) : IntArray {
         for (i in 0 until GRID_SIZE) {
             if ((useUserGrid && grid[row][i][2].intValue == digit) || grid[row][i][0].intValue == digit) {
                 return intArrayOf(row, i)
@@ -135,7 +146,12 @@ class SudokuViewModel: ViewModel() {
         return intArrayOf()
     }
 
-    fun isUnusedInColumn(column: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>, useUserGrid: Boolean) : IntArray {
+    fun isUnusedInColumn(
+        column: Int = uiState.value.selectedCellColumn,
+        digit: Int = uiState.value.selectedDigit,
+        grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
+        useUserGrid: Boolean = true
+    ) : IntArray {
         for (i in 0 until GRID_SIZE) {
             if ((useUserGrid && grid[i][column][2].intValue == digit) || grid[i][column][0].intValue == digit) {
                 return intArrayOf(i, column)
