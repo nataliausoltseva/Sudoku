@@ -27,9 +27,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.RoundedCornerShape //FIXME: replace with MaterialTheme.shapes.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Edit
@@ -47,6 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -80,7 +78,6 @@ import androidx.compose.ui.unit.sp
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
-import com.nataliausoltseva.sudoku.sudokaData.GRID_SIZE_SQUARE_ROOT
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
@@ -143,7 +140,7 @@ fun MainApp(
                 BasicAlertDialog(
                     onDismissRequest = {},
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.large)
                         .background(MaterialTheme.colorScheme.onPrimary)
                 ) {
                     Column(
@@ -234,7 +231,7 @@ fun MainApp(
                             },
                         )
                     }
-
+                    val currentCell =  sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue
                     if (isLandscape) {
                         Row {
                             Row {
@@ -287,19 +284,26 @@ fun MainApp(
                                                 })
                                             }
                                         }
-                                        GridActions(
-                                            currentCell = sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue,
+                                        SelectionNumbers(
                                             selectionNumbers = sudokuUIState.selectionNumbers,
-                                            onSelection = { digit: Int, canInsert: Boolean -> sudokuViewModel.onSelection(digit, canInsert) },
-                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                            onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
+                                            cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
                                             canInsert = { sudokuViewModel.canInsert(it) },
-                                            hasSteps = sudokuUIState.hasSteps,
-                                            onUndo = { sudokuViewModel.onUndo() },
-                                            onErase = { sudokuViewModel.onErase() },
-                                            onNote = { sudokuViewModel.onNote() },
-                                            useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.hintNum,
+                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
                                         )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceAround
+                                        ) {
+                                            UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
+                                            EraseButton(onErase = { sudokuViewModel.onErase() })
+                                            NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
+                                            HintsButton(
+                                                useHint = { sudokuViewModel.useHint() },
+                                                hintNum = sudokuUIState.hintNum
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -355,19 +359,26 @@ fun MainApp(
                                         isNotesEnabled = sudokuUIState.isNotesEnabled
                                     )
                                     Column {
-                                        GridActions(
-                                            currentCell = sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue,
+                                        SelectionNumbers(
                                             selectionNumbers = sudokuUIState.selectionNumbers,
-                                            onSelection = { digit: Int, canInsert: Boolean -> sudokuViewModel.onSelection(digit, canInsert) },
-                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                            onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
+                                            cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
                                             canInsert = { sudokuViewModel.canInsert(it) },
-                                            hasSteps = sudokuUIState.hasSteps,
-                                            onUndo = { sudokuViewModel.onUndo() },
-                                            onErase = { sudokuViewModel.onErase() },
-                                            onNote = { sudokuViewModel.onNote() },
-                                            useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.hintNum,
+                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
                                         )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceAround
+                                        ) {
+                                            UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
+                                            EraseButton(onErase = { sudokuViewModel.onErase() })
+                                            NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
+                                            HintsButton(
+                                                useHint = { sudokuViewModel.useHint() },
+                                                hintNum = sudokuUIState.hintNum
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -417,7 +428,7 @@ fun WelcomeDialog(
     BasicAlertDialog(
         onDismissRequest = { onDismiss() },
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.onPrimary)
     ) {
         Column(
@@ -429,7 +440,7 @@ fun WelcomeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    Surface( //FIXME: use an IconButton
+                    IconButton(
                         onClick = { onDismiss() }
                     ) {
                         Icon(
@@ -520,7 +531,7 @@ fun Settings(
     BasicAlertDialog(
         onDismissRequest = {},
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.onPrimary)
     ) {
         Column(
@@ -691,7 +702,7 @@ fun MistakeCounter(
         BasicAlertDialog(
             onDismissRequest = {},
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.onPrimary)
         ) {
             Column(
@@ -738,7 +749,7 @@ fun HintsButton(
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .absoluteOffset(55.dp, 0.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(MaterialTheme.shapes.large)
         ) {
             Text(
                 text = hintNum.toString(),
@@ -841,14 +852,20 @@ fun SudokuGrid(
                                     if (!isCurrentCell) {
                                         if (hasHorizontalOutline && hasRowHighlight) {
                                             drawLine(
-                                                start = Offset(x = size.width - 1.dp.toPx(), y = 0f),
+                                                start = Offset(
+                                                    x = size.width - 1.dp.toPx(),
+                                                    y = 0f
+                                                ),
                                                 end = Offset(x = 0f, y = 0f),
                                                 color = outlineColour,
                                                 strokeWidth = 1.dp.toPx()
                                             )
                                         } else if (row != 0) {
                                             drawLine(
-                                                start = Offset(x = size.width - 1.dp.toPx(), y = 0f),
+                                                start = Offset(
+                                                    x = size.width - 1.dp.toPx(),
+                                                    y = 0f
+                                                ),
                                                 end = Offset(x = 0f, y = 0f),
                                                 color = rowDividerColour,
                                                 strokeWidth = 1.dp.toPx()
@@ -955,7 +972,7 @@ fun SudokuGrid(
 fun RestartButton(
     onRestart: () -> Unit,
 ) {
-    Surface( //FIXME: use an IconButton
+    IconButton(
         onClick = { onRestart() }
     ) {
         Icon(
@@ -1010,33 +1027,30 @@ fun SelectionNumbers(
             isClicked.value = false
         }
     }
+    Row(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        for (i in 0 until 9) {
+            val label = i + 1
+            val isAvailable = selectionNumbers[i] > 0
+            var labelColor = MaterialTheme.colorScheme.inversePrimary
+            if (isAvailable) {
+                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            }
 
-    LazyVerticalGrid( //FIXME: use a row
-        columns = GridCells.Fixed(9),
-        modifier = Modifier.padding(0.dp, 16.dp, 0.dp, 0.dp),
-        content = {
-            items(9) { i ->
-                val label = i + 1
-                val isAvailable = selectionNumbers[i] > 0
-                var labelColor = MaterialTheme.colorScheme.inversePrimary
-                if (isAvailable) {
-                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                }
-
-                Surface( //FIXME: use an TextButton
-                    onClick = { onSelect(label) },
-                    enabled = isAvailable,
-                ) {
-                    val displayValue = label.toString()
-                    Text(
-                        text = displayValue,
-                        Modifier.padding(20.dp),
-                        color = labelColor
-                    )
-                }
+            Surface(
+                onClick = { onSelect(label) },
+                enabled = isAvailable,
+            ) {
+                val displayValue = label.toString()
+                Text(
+                    text = displayValue,
+                    Modifier.padding(20.dp),
+                    color = labelColor
+                )
             }
         }
-    )
+    }
 }
 
 @Composable
@@ -1082,7 +1096,7 @@ fun SettingsBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         restartButton()
-        Surface( //FIXME: use an IconButton
+        IconButton(
             onClick = { onShowSettings() },
             modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
         ) {
@@ -1091,42 +1105,6 @@ fun SettingsBar(
                 contentDescription = "Settings icon"
             )
         }
-    }
-}
-
-@Composable
-fun GridActions( //FIXME: Make this just have 2 @Composable parameters
-    currentCell: Int,
-    selectionNumbers: Array<Int>,
-    onSelection: (digit: Int, canInsert: Boolean) -> Unit,
-    isNotesEnabled: Boolean,
-    canInsert: (digit: Int) -> Boolean,
-    hasSteps: Boolean,
-    onUndo: () -> Unit,
-    onErase: () -> Unit,
-    onNote: () -> Unit,
-    useHint: () -> Unit,
-    hintNum: Int,
-) {
-    SelectionNumbers(
-        selectionNumbers = selectionNumbers,
-        onSelection = { digit: Int, isInsertable: Boolean -> onSelection(digit, isInsertable) },
-        cannotInsert = isNotesEnabled && currentCell != 0,
-        canInsert = { canInsert(it) },
-        isNotesEnabled = isNotesEnabled,
-    )
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        UndoButton(hasSteps, onUndo = { onUndo() })
-        EraseButton(onErase = { onErase() })
-        NotesButton(isNotesEnabled, onNote = { onNote() })
-        HintsButton(
-            useHint = { useHint() },
-            hintNum = hintNum
-        )
     }
 }
 
@@ -1153,7 +1131,7 @@ fun GameIndications(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Timer(timerViewModel)
-            Surface( //FIXME: use an IconButton
+            IconButton(
                 onClick = { onPause() }
             ) {
                 val icon =
