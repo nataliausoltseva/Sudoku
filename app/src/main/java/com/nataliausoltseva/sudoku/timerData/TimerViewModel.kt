@@ -14,6 +14,9 @@ class TimerViewModel: ViewModel() {
 
     private var timerJob: Job? = null
 
+    /**
+     * Starts the timer. This can be used as initial or resuming state,
+     */
     fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
@@ -23,20 +26,32 @@ class TimerViewModel: ViewModel() {
             }
         }
     }
+
+    /**
+     * Pauses the timer so that it would not go on, if the game is paused or finished.
+     */
     fun pauseTimer() {
         timerJob?.cancel()
     }
 
+    /**
+     * Resets the timer to 0 so that it can be started again once the game has started.
+     */
     fun stopTimer() {
         _timer.value = 0
         timerJob?.cancel()
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
+    /**
+     * Gets formatted timer based on the state.
+     */
+    fun getTimer(): String {
+        return formatTime(_timer.value)
     }
 
+    /**
+     * Returns formatted string for UI.
+     */
     fun formatTime(timer: Long): String {
         val hours = timer / 3600
         val minutes = (timer % 3600) / 60
@@ -44,8 +59,9 @@ class TimerViewModel: ViewModel() {
         return String.format("%02d:%02d:%02d", hours, minutes, remainingSeconds)
     }
 
-    fun getTimer(): String {
-        return formatTime(_timer.value)
+    override fun onCleared() {
+        super.onCleared()
+        timerJob?.cancel()
     }
 
     init {

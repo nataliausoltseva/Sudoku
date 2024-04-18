@@ -785,9 +785,9 @@ fun SudokuGrid(
     unlockedCell: Array<Int?>,
     gridWithNotes: Array<Array<Array<MutableIntState>>>,
     selectedDigit: Int,
-    onBoxCheck: () -> IntArray,
-    onRowCheck: () -> IntArray,
-    onColumnCheck: () -> IntArray,
+    onBoxCheck: () -> IntArray?,
+    onRowCheck: () -> IntArray?,
+    onColumnCheck: () -> IntArray?,
     isNotesEnabled: Boolean
 ) {
     Box {
@@ -893,9 +893,9 @@ fun SudokuGrid(
                                 val repeatedInRow = onRowCheck()
                                 val repeatedInColumn = onColumnCheck()
 
-                                if ((repeatedInBox.isNotEmpty() && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
-                                    (repeatedInRow.isNotEmpty() && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
-                                    (repeatedInColumn.isNotEmpty() && row == repeatedInColumn[0] && index == repeatedInColumn[1])
+                                if ((repeatedInBox != null && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
+                                    (repeatedInRow != null && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
+                                    (repeatedInColumn != null && row == repeatedInColumn[0] && index == repeatedInColumn[1])
                                 ) {
                                     LaunchedEffect(true) {
                                         scale.animateTo(1f, animationSpec = tween(0))
