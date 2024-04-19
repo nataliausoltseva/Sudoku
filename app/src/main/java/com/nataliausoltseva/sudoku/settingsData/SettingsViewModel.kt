@@ -24,6 +24,11 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsState())
     val uiState: StateFlow<SettingsState> = _uiState.asStateFlow()
 
+    /**
+     * Saves the state what a user wants to allow for the current game state.
+     * Theme is saved to datastore, so that next time a user enters the application, they do not have
+     * to select it again. Other settings are dependent on the game and will be reset.
+     */
     fun onSave(
         showMistakes: Boolean,
         hasMistakeCounter: Boolean,
@@ -48,10 +53,17 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Tries to get a theme from datastore. If datastore was not created, returns system theme.
+     */
     private suspend fun readTheme(): String {
         val settings = context.dataStore.data.first()
         return settings[THEME_KEY] ?: THEMES[0]
     }
+
+    /**
+     * Saves the selected theme into datastore.
+     */
     private suspend fun saveTheme(theme: String) {
         context.dataStore.edit { settings ->
             settings[THEME_KEY] = theme
