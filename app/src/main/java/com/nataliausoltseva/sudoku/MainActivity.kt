@@ -179,7 +179,7 @@ fun MainApp(
                     hasClosingButton = isRestartClicked.value,
                 )
             } else {
-                if (sudokuUIState.stepsToGo == 0) {
+                if (!sudokuUIState.hasStepsToGo) {
                     timerViewModel.pauseTimer()
                     EndScreen(
                         hasTimer = settingsUIState.hasTimer,
@@ -235,93 +235,29 @@ fun MainApp(
                     if (isLandscape) {
                         Row {
                             Row {
-                                if (sudokuUIState.stepsToGo > 0) {
-                                    Column(
-                                        modifier = Modifier.fillMaxHeight(),
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        SudokuGrid(
-                                            grid = sudokuUIState.matrix,
-                                            selectedCellRow = sudokuUIState.selectedCellRow,
-                                            selectedCellColumn = sudokuUIState.selectedCellColumn,
-                                            hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                            onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
-                                            hasRowHighlight = settingsUIState.hasRowHighlight,
-                                            isPaused = sudokuUIState.isPaused,
-                                            showMistakes = settingsUIState.showMistakes,
-                                            unlockedCell = sudokuUIState.unlockedCell,
-                                            gridWithNotes = sudokuUIState.matrixWithNotes,
-                                            selectedDigit = sudokuUIState.selectedDigit,
-                                            onBoxCheck = { sudokuViewModel.isUnusedInBox() },
-                                            onRowCheck = { sudokuViewModel.isUnusedInRow() },
-                                            onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
-                                            isNotesEnabled = sudokuUIState.isNotesEnabled
-                                        )
-                                    }
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            GameIndications(
-                                                timerViewModel = timerViewModel,
-                                                selectedLevel = sudokuUIState.selectedLevel,
-                                                hasMistakeCounter = settingsUIState.hasMistakeCounter,
-                                                mistakesNum = sudokuUIState.mistakesNum,
-                                                onRegenerate = { sudokuViewModel.onRegenerate() },
-                                                hasTimer = settingsUIState.hasTimer,
-                                                isPaused = sudokuUIState.isPaused,
-                                                onPause = {
-                                                    sudokuViewModel.onPause()
-                                                    timerViewModel.pauseTimer()
-                                                }
-                                            )
-                                            SettingsBar(onShowSettings = { showSettings.value = true }) {
-                                                RestartButton(onRestart = {
-                                                    timerViewModel.stopTimer()
-                                                    isRestartClicked.value = true
-                                                })
-                                            }
-                                        }
-                                        SelectionNumbers(
-                                            selectionNumbers = sudokuUIState.selectionNumbers,
-                                            onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
-                                            cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
-                                            canInsert = { sudokuViewModel.canInsert(it) },
-                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
-                                        )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceAround
-                                        ) {
-                                            UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
-                                            EraseButton(onErase = { sudokuViewModel.onErase() })
-                                            NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
-                                            HintsButton(
-                                                useHint = { sudokuViewModel.useHint() },
-                                                hintNum = sudokuUIState.hintNum
-                                            )
-                                        }
-                                    }
+                                Column(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    SudokuGrid(
+                                        grid = sudokuUIState.matrix,
+                                        selectedCellRow = sudokuUIState.selectedCellRow,
+                                        selectedCellColumn = sudokuUIState.selectedCellColumn,
+                                        hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                                        onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
+                                        hasRowHighlight = settingsUIState.hasRowHighlight,
+                                        isPaused = sudokuUIState.isPaused,
+                                        showMistakes = settingsUIState.showMistakes,
+                                        unlockedCell = sudokuUIState.unlockedCell,
+                                        gridWithNotes = sudokuUIState.matrixWithNotes,
+                                        selectedDigit = sudokuUIState.selectedDigit,
+                                        onBoxCheck = { sudokuViewModel.isUnusedInBox() },
+                                        onRowCheck = { sudokuViewModel.isUnusedInRow() },
+                                        onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
+                                        isNotesEnabled = sudokuUIState.isNotesEnabled
+                                    )
                                 }
-                            }
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            SettingsBar(onShowSettings = { showSettings.value = true }) {
-                                RestartButton(onRestart = {
-                                    timerViewModel.stopTimer()
-                                    isRestartClicked.value = true
-                                })
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                if (sudokuUIState.stepsToGo > 0) {
+                                Column {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -340,45 +276,105 @@ fun MainApp(
                                                 timerViewModel.pauseTimer()
                                             }
                                         )
-                                    }
-                                    SudokuGrid(
-                                        grid = sudokuUIState.matrix,
-                                        selectedCellRow = sudokuUIState.selectedCellRow,
-                                        selectedCellColumn = sudokuUIState.selectedCellColumn,
-                                        hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                        onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
-                                        hasRowHighlight = settingsUIState.hasRowHighlight,
-                                        isPaused = sudokuUIState.isPaused,
-                                        showMistakes = settingsUIState.showMistakes,
-                                        unlockedCell = sudokuUIState.unlockedCell,
-                                        gridWithNotes = sudokuUIState.matrixWithNotes,
-                                        selectedDigit = sudokuUIState.selectedDigit,
-                                        onBoxCheck = { sudokuViewModel.isUnusedInBox() },
-                                        onRowCheck = { sudokuViewModel.isUnusedInRow() },
-                                        onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
-                                        isNotesEnabled = sudokuUIState.isNotesEnabled
-                                    )
-                                    Column {
-                                        SelectionNumbers(
-                                            selectionNumbers = sudokuUIState.selectionNumbers,
-                                            onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
-                                            cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
-                                            canInsert = { sudokuViewModel.canInsert(it) },
-                                            isNotesEnabled = sudokuUIState.isNotesEnabled,
-                                        )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceAround
-                                        ) {
-                                            UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
-                                            EraseButton(onErase = { sudokuViewModel.onErase() })
-                                            NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
-                                            HintsButton(
-                                                useHint = { sudokuViewModel.useHint() },
-                                                hintNum = sudokuUIState.hintNum
-                                            )
+                                        SettingsBar(onShowSettings = { showSettings.value = true }) {
+                                            RestartButton(onRestart = {
+                                                timerViewModel.stopTimer()
+                                                isRestartClicked.value = true
+                                            })
                                         }
+                                    }
+                                    SelectionNumbers(
+                                        selectionNumbers = sudokuUIState.selectionNumbers,
+                                        onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
+                                        cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
+                                        canInsert = { sudokuViewModel.canInsert(it) },
+                                        isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceAround
+                                    ) {
+                                        UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
+                                        EraseButton(onErase = { sudokuViewModel.onErase() })
+                                        NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
+                                        HintsButton(
+                                            useHint = { sudokuViewModel.useHint() },
+                                            hintNum = sudokuUIState.hintNum
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            SettingsBar(onShowSettings = { showSettings.value = true }) {
+                                RestartButton(onRestart = {
+                                    timerViewModel.stopTimer()
+                                    isRestartClicked.value = true
+                                })
+                            }
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    GameIndications(
+                                        timerViewModel = timerViewModel,
+                                        selectedLevel = sudokuUIState.selectedLevel,
+                                        hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                                        mistakesNum = sudokuUIState.mistakesNum,
+                                        onRegenerate = { sudokuViewModel.onRegenerate() },
+                                        hasTimer = settingsUIState.hasTimer,
+                                        isPaused = sudokuUIState.isPaused,
+                                        onPause = {
+                                            sudokuViewModel.onPause()
+                                            timerViewModel.pauseTimer()
+                                        }
+                                    )
+                                }
+                                SudokuGrid(
+                                    grid = sudokuUIState.matrix,
+                                    selectedCellRow = sudokuUIState.selectedCellRow,
+                                    selectedCellColumn = sudokuUIState.selectedCellColumn,
+                                    hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                                    onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
+                                    hasRowHighlight = settingsUIState.hasRowHighlight,
+                                    isPaused = sudokuUIState.isPaused,
+                                    showMistakes = settingsUIState.showMistakes,
+                                    unlockedCell = sudokuUIState.unlockedCell,
+                                    gridWithNotes = sudokuUIState.matrixWithNotes,
+                                    selectedDigit = sudokuUIState.selectedDigit,
+                                    onBoxCheck = { sudokuViewModel.isUnusedInBox() },
+                                    onRowCheck = { sudokuViewModel.isUnusedInRow() },
+                                    onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled
+                                )
+                                Column {
+                                    SelectionNumbers(
+                                        selectionNumbers = sudokuUIState.selectionNumbers,
+                                        onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
+                                        cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
+                                        canInsert = { sudokuViewModel.canInsert(it) },
+                                        isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceAround
+                                    ) {
+                                        UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
+                                        EraseButton(onErase = { sudokuViewModel.onErase() })
+                                        NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
+                                        HintsButton(
+                                            useHint = { sudokuViewModel.useHint() },
+                                            hintNum = sudokuUIState.hintNum
+                                        )
                                     }
                                 }
                             }

@@ -91,7 +91,6 @@ class SudokuViewModel: ViewModel() {
         _uiState.update {
             it.copy(
                 hasStarted = false,
-                stepsToGo = 0,
                 hintNum = 3,
                 unlockedCell = arrayOf(null, null),
                 steps = listOf(),
@@ -165,7 +164,7 @@ class SudokuViewModel: ViewModel() {
                 matrix = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(3) { mutableIntStateOf(0) }  } },
                 selectionNumbers = Array(9) { 0 },
                 mistakesNum = 0,
-                stepsToGo = 0,
+                hasStepsToGo = true,
                 hintNum = 3,
                 unlockedCell = arrayOf(null, null),
                 steps = listOf(),
@@ -207,7 +206,6 @@ class SudokuViewModel: ViewModel() {
      */
     fun useHint() {
         var hintNum = uiState.value.hintNum
-        var stepsToGo = uiState.value.stepsToGo
         val grid = uiState.value.matrix
         val selectionNumbers = uiState.value.selectionNumbers
         val unlockedCell = uiState.value.unlockedCell
@@ -217,7 +215,7 @@ class SudokuViewModel: ViewModel() {
         _uiState.update {
             it.copy(
                 hintNum = --hintNum,
-                stepsToGo = --stepsToGo,
+                hasStepsToGo = selectionNumbers.any { number: Int -> number != 0 },
                 matrix = grid,
                 unlockedCell = unlockedCell,
                 selectionNumbers = selectionNumbers,
@@ -235,7 +233,6 @@ class SudokuViewModel: ViewModel() {
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
         val selectionNumbers = uiState.value.selectionNumbers
-        var stepsToGo = uiState.value.stepsToGo
         val cell = grid[row][column]
         val digitNumber = cell[2].intValue
         val isDeletable = cell[0].intValue == 0
@@ -244,14 +241,12 @@ class SudokuViewModel: ViewModel() {
         if (digitNumber != 0 && isDeletable) {
             selectionNumbers[digitNumber - 1]++
             grid[row][column][2].intValue = 0
-            stepsToGo++
             digit = 0
 
             _uiState.update {
                 it.copy(
                     selectionNumbers = selectionNumbers,
                     matrix = grid,
-                    stepsToGo = stepsToGo,
                 )
             }
         }
@@ -285,7 +280,6 @@ class SudokuViewModel: ViewModel() {
         val selectionNumbers = uiState.value.selectionNumbers
         var selectedCellRow = uiState.value.selectedCellRow
         var selectedCellColumn = uiState.value.selectedCellColumn
-        var stepsToGo = uiState.value.stepsToGo
         val grid = uiState.value.matrix
         val gridWithNotes = uiState.value.matrixWithNotes
 
@@ -296,7 +290,6 @@ class SudokuViewModel: ViewModel() {
         if (step.digit != null && step.previousDigit != null) {
             val digit = (step.digit - 1).coerceAtLeast(0)
             selectionNumbers[digit]++
-            stepsToGo++
             grid[selectedCellRow][selectedCellColumn][2].intValue = step.previousDigit
 
         // Else the step included insertion for the notes enabled mode.
@@ -325,7 +318,6 @@ class SudokuViewModel: ViewModel() {
             it.copy(
                 selectionNumbers = selectionNumbers,
                 matrix = grid,
-                stepsToGo = stepsToGo,
                 steps = steps,
                 hasSteps = steps.size > 0,
                 matrixWithNotes = gridWithNotes,
@@ -354,15 +346,13 @@ class SudokuViewModel: ViewModel() {
     private fun fillGrid() {
         val grid = uiState.value.matrix
         val selectionNumbers = uiState.value.selectionNumbers
-        var stepsToGo = uiState.value.stepsToGo
         fillDiagonally(grid)
         fillRemaining(0, GRID_SIZE_SQUARE_ROOT, grid)
-        stepsToGo = removeDigits(grid, selectionNumbers, stepsToGo)
+        removeDigits(grid, selectionNumbers)
         _uiState.update {
             it.copy(
                 matrix = grid,
                 selectionNumbers = selectionNumbers,
-                stepsToGo = stepsToGo
             )
         }
     }
@@ -465,8 +455,7 @@ class SudokuViewModel: ViewModel() {
      * a chance that the hardest level might be easier than medium.
      * @see getRandomUniqueCell how the random x value is determined
      */
-    private fun removeDigits(grid: Array<Array<Array<MutableIntState>>>, selectionNumbers: Array<Int>, stepsToGo: Int): Int {
-        var newStepsToGo = stepsToGo
+    private fun removeDigits(grid: Array<Array<Array<MutableIntState>>>, selectionNumbers: Array<Int>) {
         for (j in 0 until GRID_SIZE) {
             val level = numToRemove
             for (k in 0 until (level..GRID_SIZE).random()) {
@@ -477,11 +466,9 @@ class SudokuViewModel: ViewModel() {
                     selectionNumbers[currentValue - 1] += 1
                     grid[i][j][0].intValue = 0
                     grid[i][j][2].intValue = 0
-                    newStepsToGo++
                 }
             }
         }
-        return newStepsToGo
     }
 
     /**
@@ -561,23 +548,17 @@ class SudokuViewModel: ViewModel() {
         val column = uiState.value.selectedCellColumn
         val selectionNumbers = uiState.value.selectionNumbers
         var mistakesNum = uiState.value.mistakesNum
-        var stepsToGo = uiState.value.stepsToGo
         val previousCellDigit: Int?
-        if (selectedDigit != 0 && grid[row][column][0].intValue == 0) {
+        val isNotCurrentValue = grid[row][column][2].intValue != selectedDigit
+        if (grid[row][column][0].intValue == 0 && isNotCurrentValue) {
             previousCellDigit = grid[row][column][2].intValue
             if (grid[row][column][1].intValue != selectedDigit) {
                 mistakesNum++
-            } else {
-                stepsToGo--
             }
-            val isEmptyCell = grid[row][column][2].intValue != 0
-            val isNotCurrentValue = grid[row][column][2].intValue != selectedDigit
-            if (isEmptyCell && isNotCurrentValue) {
-                selectionNumbers[grid[row][column][2].intValue - 1]++
 
-                if (grid[row][column][1].intValue != selectedDigit) {
-                    stepsToGo++
-                }
+            val isEmptyCell = grid[row][column][2].intValue != 0
+            if (isEmptyCell) {
+                selectionNumbers[grid[row][column][2].intValue - 1]++
             }
 
             selectionNumbers[selectedDigit - 1]--
@@ -596,7 +577,7 @@ class SudokuViewModel: ViewModel() {
                     matrix = grid,
                     selectionNumbers = selectionNumbers,
                     mistakesNum = mistakesNum,
-                    stepsToGo = stepsToGo
+                    hasStepsToGo = selectionNumbers.any { number: Int -> number != 0 }
                 )
             }
         }
