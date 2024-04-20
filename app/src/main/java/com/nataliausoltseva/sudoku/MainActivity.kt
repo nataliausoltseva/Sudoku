@@ -45,6 +45,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -742,7 +743,7 @@ fun HintsButton(
             )
         }
         Surface(
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier
                 .absoluteOffset(55.dp, 0.dp)
                 .clip(MaterialTheme.shapes.large)
@@ -871,8 +872,19 @@ fun SudokuGrid(
                                 }
                         ) {
                             val scale = remember { Animatable(1f) }
-                            val isUnlockedCell = unlockedCell[0] == row && unlockedCell[1] == index
-                            if (isUnlockedCell) {
+                            var shouldAnimate = unlockedCell[0] == row && unlockedCell[1] == index
+
+                            if (isNotesEnabled && selectedDigit != 0) {
+                                val repeatedInBox = onBoxCheck()
+                                val repeatedInRow = onRowCheck()
+                                val repeatedInColumn = onColumnCheck()
+
+                                shouldAnimate = (repeatedInBox != null && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
+                                        (repeatedInRow != null && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
+                                        (repeatedInColumn != null && row == repeatedInColumn[0] && index == repeatedInColumn[1])
+                            }
+
+                            if (shouldAnimate) {
                                 LaunchedEffect(true) {
                                     scale.animateTo(1f, animationSpec = tween(0))
                                     scale.animateTo(3f, animationSpec = tween(350))
@@ -881,27 +893,6 @@ fun SudokuGrid(
                             } else {
                                 LaunchedEffect(true) {
                                     scale.animateTo(1f, animationSpec = tween(0))
-                                }
-                            }
-
-                            if (isNotesEnabled && selectedDigit != 0) {
-                                val repeatedInBox = onBoxCheck()
-                                val repeatedInRow = onRowCheck()
-                                val repeatedInColumn = onColumnCheck()
-
-                                if ((repeatedInBox != null && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
-                                    (repeatedInRow != null && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
-                                    (repeatedInColumn != null && row == repeatedInColumn[0] && index == repeatedInColumn[1])
-                                ) {
-                                    LaunchedEffect(true) {
-                                        scale.animateTo(1f, animationSpec = tween(0))
-                                        scale.animateTo(3f, animationSpec = tween(350))
-                                        scale.animateTo(1f, animationSpec = tween(350))
-                                    }
-                                } else {
-                                    LaunchedEffect(true) {
-                                        scale.animateTo(1f, animationSpec = tween(0))
-                                    }
                                 }
                             }
                             val gridWithNoteCell = gridWithNotes[row][index]
@@ -1028,7 +1019,7 @@ fun SelectionNumbers(
     ) {
         for (i in 0 until 9) {
             val label = i + 1
-            val isAvailable = selectionNumbers[i] > 0
+            val isAvailable = selectionNumbers[i] > 0 || isNotesEnabled
             var labelColor = MaterialTheme.colorScheme.inversePrimary
             if (isAvailable) {
                 labelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1078,7 +1069,7 @@ fun NotesButton(
         Icon(
             Icons.Filled.Edit,
             contentDescription = "Notes button",
-            tint = if (isActive) Color.Green else Color.Unspecified
+            tint = if (isActive) Color.Green else LocalContentColor.current
         )
     }
 }
