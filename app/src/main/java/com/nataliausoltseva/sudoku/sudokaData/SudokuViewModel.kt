@@ -96,6 +96,7 @@ class SudokuViewModel: ViewModel() {
                 steps = listOf(),
                 selectedCellRow = 0,
                 selectedCellColumn = 0,
+                hasSteps = false,
             )
         }
     }
@@ -172,7 +173,8 @@ class SudokuViewModel: ViewModel() {
                 selectedCellColumn = 0,
                 isNotesEnabled = false,
                 matrixWithNotes = Array(9) { Array(9) { Array(9) { mutableIntStateOf(0) }  } },
-                selectedDigit = 0
+                selectedDigit = 0,
+                hasSteps = false,
             )
         }
         numToRemove = NUM_TO_REMOVE[index]
@@ -267,7 +269,7 @@ class SudokuViewModel: ViewModel() {
         )
 
         _uiState.update {
-            it.copy(matrixWithNotes = gridWithNotes, selectedDigit = 0,)
+            it.copy(matrixWithNotes = gridWithNotes, selectedDigit = 0)
         }
     }
 
