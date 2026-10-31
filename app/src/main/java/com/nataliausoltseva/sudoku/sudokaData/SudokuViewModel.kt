@@ -15,47 +15,39 @@ const val GRID_SIZE_SQUARE_ROOT = 3
 val LEVELS = arrayOf("Easy", "Medium", "Hard", "Expert", "Master")
 private val NUM_TO_REMOVE = arrayOf(1, 2, 4, 6, 7)
 
-class SudokuViewModel: ViewModel() {
+class SudokuViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(SudokuState())
     val uiState: StateFlow<SudokuState> = _uiState.asStateFlow()
 
-    // This is used to know how many numbers we need to remove from the grid. It resets when a new
-    // game starts.
     private var numToRemove: Int = NUM_TO_REMOVE[0]
 
-    /**
-     * If a 3x3 box includes a digit that is going to be inserted, then it returns the cell where that
-     * digit is located. Else returns null.
-     */
     fun isUnusedInBox(
         rowStart: Int = uiState.value.selectedCellRow - uiState.value.selectedCellRow % GRID_SIZE_SQUARE_ROOT,
-        columnStart: Int = uiState.value.selectedCellColumn - uiState.value.selectedCellColumn  % GRID_SIZE_SQUARE_ROOT,
+        columnStart: Int = uiState.value.selectedCellColumn - uiState.value.selectedCellColumn % GRID_SIZE_SQUARE_ROOT,
         digit: Int = uiState.value.selectedDigit,
         grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
         useUserGrid: Boolean = true
     ): IntArray? {
+        val rStart = rowStart - rowStart % GRID_SIZE_SQUARE_ROOT
+        val cStart = columnStart - columnStart % GRID_SIZE_SQUARE_ROOT
         for (i in 0 until GRID_SIZE_SQUARE_ROOT) {
             for (j in 0 until GRID_SIZE_SQUARE_ROOT) {
-                if ((useUserGrid && grid[rowStart + i][columnStart + j][2].intValue == digit ) ||
-                    grid[rowStart + i][columnStart + j][0].intValue == digit
+                if ((useUserGrid && grid[rStart + i][cStart + j][2].intValue == digit) ||
+                    grid[rStart + i][cStart + j][0].intValue == digit
                 ) {
-                    return intArrayOf(rowStart + i, columnStart + j)
+                    return intArrayOf(rStart + i, cStart + j)
                 }
             }
         }
         return null
     }
 
-    /**
-     * If a horizontal row includes a digit that is going to be inserted, then it returns the cell where that
-     * digit is located. Else returns null.
-     */
     fun isUnusedInRow(
         row: Int = uiState.value.selectedCellRow,
         digit: Int = uiState.value.selectedDigit,
         grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
         useUserGrid: Boolean = true
-    ) : IntArray? {
+    ): IntArray? {
         for (i in 0 until GRID_SIZE) {
             if ((useUserGrid && grid[row][i][2].intValue == digit) || grid[row][i][0].intValue == digit) {
                 return intArrayOf(row, i)
@@ -64,29 +56,20 @@ class SudokuViewModel: ViewModel() {
         return null
     }
 
-    /**
-     * If a vertical row includes a digit that is going to be inserted, then it returns the cell where that
-     * digit is located. Else returns null.
-     */
     fun isUnusedInColumn(
         column: Int = uiState.value.selectedCellColumn,
         digit: Int = uiState.value.selectedDigit,
         grid: Array<Array<Array<MutableIntState>>> = uiState.value.matrix,
         useUserGrid: Boolean = true
-    ) : IntArray? {
+    ): IntArray? {
         for (i in 0 until GRID_SIZE) {
             if ((useUserGrid && grid[i][column][2].intValue == digit) || grid[i][column][0].intValue == digit) {
                 return intArrayOf(i, column)
             }
         }
-
         return null
     }
 
-    /**
-     * When the game is finished either by losing or winning, the state is set to default so that
-     * the welcome dialog can be shown.
-     */
     fun onRegenerate() {
         _uiState.update {
             it.copy(
@@ -101,10 +84,6 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Saves the selected digit that was getting inserted. If it can be inserted, then include in the
-     * grid. Else UI will show the animation for other cells with the same digits.
-     */
     fun onSelection(digit: Int, canInsert: Boolean) {
         _uiState.update {
             it.copy(
@@ -121,13 +100,6 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Checks if a selected digit can be inserted into a cell when notes is enabled. Uses the
-     * following functions to determine if the value can be inserted:
-     * @see isUnusedInRow
-     * @see isUnusedInColumn
-     * @see isUnusedInBox
-     */
     fun canInsert(digit: Int): Boolean {
         if (!uiState.value.isNotesEnabled) return true
         return checkIfSafe(
@@ -139,10 +111,6 @@ class SudokuViewModel: ViewModel() {
         )
     }
 
-    /**
-     * Saves coordinates of currently selected cell, also resets selected digit, so that UI
-     * would not trigger animation.
-     */
     fun onSelectCell(row: Int, column: Int) {
         _uiState.update {
             it.copy(
@@ -153,16 +121,12 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Begins the new game by resetting the state to the default values, followed by calling fillGrid()
-     * @see fillGrid
-     */
     fun onStart(index: Int) {
         _uiState.update {
             it.copy(
                 selectedLevel = LEVELS[index],
                 hasStarted = true,
-                matrix = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(3) { mutableIntStateOf(0) }  } },
+                matrix = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(3) { mutableIntStateOf(0) } } },
                 selectionNumbers = Array(9) { 0 },
                 mistakesNum = 0,
                 hasStepsToGo = true,
@@ -172,7 +136,7 @@ class SudokuViewModel: ViewModel() {
                 selectedCellRow = 0,
                 selectedCellColumn = 0,
                 isNotesEnabled = false,
-                matrixWithNotes = Array(9) { Array(9) { Array(9) { mutableIntStateOf(0) }  } },
+                matrixWithNotes = Array(GRID_SIZE) { Array(GRID_SIZE) { Array(9) { mutableIntStateOf(0) } } },
                 selectedDigit = 0,
                 hasSteps = false,
             )
@@ -181,9 +145,6 @@ class SudokuViewModel: ViewModel() {
         fillGrid()
     }
 
-    /**
-     * Saves the state when the game was paused.
-     */
     fun onPause() {
         _uiState.update {
             it.copy(
@@ -192,9 +153,6 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Saves the state when the game was resumed.
-     */
     fun onStart() {
         _uiState.update {
             it.copy(
@@ -203,14 +161,12 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Gets a random cell to insert a hint (correct value from the solved grid).
-     */
     fun useHint() {
         var hintNum = uiState.value.hintNum
+        if (hintNum <= 0) return
         val grid = uiState.value.matrix
-        val selectionNumbers = uiState.value.selectionNumbers
-        val unlockedCell = uiState.value.unlockedCell
+        val selectionNumbers = uiState.value.selectionNumbers.copyOf()
+        val unlockedCell = uiState.value.unlockedCell.copyOf()
 
         unlockACell(grid, unlockedCell, selectionNumbers)
 
@@ -226,113 +182,109 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Checks if a value can be erased i.e. if the initial grid has that cell set to 0. This is applied
-     * to both normal and notes enabled modes. After the value is removed, it is stored as a step.
-     */
     fun onErase() {
         val grid = uiState.value.matrix
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
-        val selectionNumbers = uiState.value.selectionNumbers
+        val selectionNumbers = uiState.value.selectionNumbers.copyOf()
         val cell = grid[row][column]
-        val digitNumber = cell[2].intValue
+        val currentDigit = cell[2].intValue
         val isDeletable = cell[0].intValue == 0
-        var digit: Int? = null
-        val previousCellDigit = grid[row][column][2].intValue
-        if (digitNumber != 0 && isDeletable) {
-            selectionNumbers[digitNumber - 1]++
+
+        if (currentDigit != 0 && isDeletable) {
+            selectionNumbers[currentDigit - 1]++
             grid[row][column][2].intValue = 0
-            digit = 0
+
+            val previousCellWithNote = Array(9) { mutableIntStateOf(uiState.value.matrixWithNotes[row][column][it].intValue) }
+
+            recordStep(
+                cellWithNote = uiState.value.matrixWithNotes[row][column],
+                previousCellWithNote = previousCellWithNote,
+                cellDigit = 0,
+                previousCellDigit = currentDigit
+            )
 
             _uiState.update {
                 it.copy(
                     selectionNumbers = selectionNumbers,
                     matrix = grid,
+                    selectedDigit = 0,
+                    hasStepsToGo = selectionNumbers.any { count -> count != 0 }
                 )
             }
-        }
+        } else {
+            val gridWithNotes = uiState.value.matrixWithNotes
+            val hasNotes = gridWithNotes[row][column].any { it.intValue != 0 }
+            if (hasNotes) {
+                val previousCellWithNote = Array(9) { mutableIntStateOf(gridWithNotes[row][column][it].intValue) }
+                gridWithNotes[row][column].forEach { it.intValue = 0 }
 
-        val gridWithNotes = uiState.value.matrixWithNotes
-        val previousCellWithNote = uiState.value.matrixWithNotes[row][column]
-        gridWithNotes[row][column].forEach {
-            if (it.intValue == 0) return@forEach
-            it.intValue = 0
-        }
+                recordStep(
+                    cellWithNote = gridWithNotes[row][column],
+                    previousCellWithNote = previousCellWithNote,
+                    cellDigit = null,
+                    previousCellDigit = null
+                )
 
-        // Saves the erase step so that it would be part of reverting steps
-        recordStep(
-            cellWithNote = Array(9) { mutableIntStateOf(0) },
-            cellDigit = digit,
-            previousCellDigit = previousCellDigit,
-            previousCellWithNote = previousCellWithNote
-        )
-
-        _uiState.update {
-            it.copy(matrixWithNotes = gridWithNotes, selectedDigit = 0)
+                _uiState.update {
+                    it.copy(matrixWithNotes = gridWithNotes, selectedDigit = 0)
+                }
+            }
         }
     }
 
-    /**
-     * Reverts the state of the user's grid to the previous step that was recorded from the user's
-     * activity. It also removes the last step from the record.
-     */
     fun onUndo() {
         val steps = uiState.value.steps.toMutableList()
-        val selectionNumbers = uiState.value.selectionNumbers
-        var selectedCellRow = uiState.value.selectedCellRow
-        var selectedCellColumn = uiState.value.selectedCellColumn
+        if (steps.isEmpty()) return
+
+        val selectionNumbers = uiState.value.selectionNumbers.copyOf()
         val grid = uiState.value.matrix
         val gridWithNotes = uiState.value.matrixWithNotes
 
-        val step = steps.last()
+        val step = steps.removeLast()
+        val cellRow = step.xIndex
+        val cellColumn = step.yIndex
 
-        // If the digit and previous digit are both sets, then the step did not include notes and was
-        // a normal mode insertion.
-        if (step.digit != null && step.previousDigit != null) {
-            val digit = (step.digit - 1).coerceAtLeast(0)
-            selectionNumbers[digit]++
-            grid[selectedCellRow][selectedCellColumn][2].intValue = step.previousDigit
+        if (step.digit != null) {
+            val insertedDigit = step.digit
+            val previousDigit = step.previousDigit ?: 0
 
-        // Else the step included insertion for the notes enabled mode.
+            grid[cellRow][cellColumn][2].intValue = previousDigit
+
+            if (insertedDigit in 1..9) {
+                selectionNumbers[insertedDigit - 1]++
+            }
+            if (previousDigit in 1..9) {
+                selectionNumbers[previousDigit - 1]--
+            }
+
+            gridWithNotes[cellRow][cellColumn].forEachIndexed { index, _ ->
+                gridWithNotes[cellRow][cellColumn][index].intValue = step.previousNotes[index].intValue
+            }
         } else {
-            gridWithNotes[selectedCellRow][selectedCellColumn].forEachIndexed { index, _ ->
-                gridWithNotes[selectedCellRow][selectedCellColumn][index].intValue = step.previousNotes[index].intValue
+            gridWithNotes[cellRow][cellColumn].forEachIndexed { index, _ ->
+                gridWithNotes[cellRow][cellColumn][index].intValue = step.previousNotes[index].intValue
             }
         }
 
-        steps.removeLast()
-
-        // If there are still steps available after removing previous step, then set the selected
-        // cell to that one.
-        if (steps.size > 0) {
-            val previousStep = steps.last()
-            selectedCellRow = previousStep.xIndex
-            selectedCellColumn = previousStep.yIndex
-
-        //  Else set the selected cell to the beginning of the game - the first cell on the grid.
-        } else {
-            selectedCellRow = 0
-            selectedCellColumn = 0
-        }
+        val nextSelectedRow = if (steps.isNotEmpty()) steps.last().xIndex else cellRow
+        val nextSelectedColumn = if (steps.isNotEmpty()) steps.last().yIndex else cellColumn
 
         _uiState.update {
             it.copy(
                 selectionNumbers = selectionNumbers,
                 matrix = grid,
                 steps = steps,
-                hasSteps = steps.size > 0,
+                hasSteps = steps.isNotEmpty(),
                 matrixWithNotes = gridWithNotes,
-                selectedCellRow = selectedCellRow,
-                selectedCellColumn = selectedCellColumn,
+                selectedCellRow = nextSelectedRow,
+                selectedCellColumn = nextSelectedColumn,
                 selectedDigit = 0,
+                hasStepsToGo = selectionNumbers.any { count -> count != 0 }
             )
         }
     }
 
-    /**
-     * Toggles notes enabled state on and off.
-     */
     fun onNote() {
         _uiState.update {
             it.copy(
@@ -342,12 +294,9 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Fills the grid fully and then removes some digits randomly based on the level of a game.
-     */
     private fun fillGrid() {
         val grid = uiState.value.matrix
-        val selectionNumbers = uiState.value.selectionNumbers
+        val selectionNumbers = uiState.value.selectionNumbers.copyOf()
         fillDiagonally(grid)
         fillRemaining(0, GRID_SIZE_SQUARE_ROOT, grid)
         removeDigits(grid, selectionNumbers)
@@ -359,18 +308,12 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Fills 3x3 box diagonally.
-     */
     private fun fillDiagonally(grid: Array<Array<Array<MutableIntState>>>) {
         for (i in 0 until GRID_SIZE step GRID_SIZE_SQUARE_ROOT) {
             fillBox(i, i, grid)
         }
     }
 
-    /**
-     * Fills 3x3 box making sure that no number is duplicated.
-     */
     private fun fillBox(row: Int, column: Int, grid: Array<Array<Array<MutableIntState>>>) {
         var generatedDigit: Int
 
@@ -385,11 +328,7 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * After filling the 3x3 boxes, there is a chance that not every cell was filled due to the checks
-     * and skips. Hence this goes over and fills all.
-     */
-    private fun fillRemaining(i: Int, j: Int, grid: Array<Array<Array<MutableIntState>>>) : Boolean {
+    private fun fillRemaining(i: Int, j: Int, grid: Array<Array<Array<MutableIntState>>>): Boolean {
         var newI = i
         var newJ = j
         if (newJ >= GRID_SIZE && newI < GRID_SIZE - 1) {
@@ -433,13 +372,7 @@ class SudokuViewModel: ViewModel() {
         return false
     }
 
-    /**
-     * Uses the following functions to see if it is safe to insert a digit into a cell.
-     * @see isUnusedInRow
-     * @see isUnusedInColumn
-     * @see isUnusedInBox
-     */
-    private fun checkIfSafe(row: Int, column: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>, useUserGrid: Boolean = false) : Boolean {
+    private fun checkIfSafe(row: Int, column: Int, digit: Int, grid: Array<Array<Array<MutableIntState>>>, useUserGrid: Boolean = false): Boolean {
         return isUnusedInRow(row, digit, grid, useUserGrid) == null &&
                 isUnusedInColumn(column, digit, grid, useUserGrid) == null &&
                 isUnusedInBox(
@@ -451,12 +384,6 @@ class SudokuViewModel: ViewModel() {
                 ) == null
     }
 
-    /**
-     * Goes over the whole board vertically and returns a random digit by getting a random cell.
-     * The harder the level, the more digits might be removed as the range goes up. There is still
-     * a chance that the hardest level might be easier than medium.
-     * @see getRandomUniqueCell how the random x value is determined
-     */
     private fun removeDigits(grid: Array<Array<Array<MutableIntState>>>, selectionNumbers: Array<Int>) {
         for (j in 0 until GRID_SIZE) {
             val level = numToRemove
@@ -473,24 +400,11 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Get a random row value when removing a digit. The value is returned if the cell with that row
-     * and column do not result in 0.
-     */
     private fun getRandomUniqueCell(column: Int, grid: Array<Array<Array<MutableIntState>>>): Int {
-        val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
-        val i = cellId / GRID_SIZE
-        if (grid[i][column][0].intValue == 0) {
-            getRandomUniqueCell(column, grid)
-        }
-
-        return i
+        val nonZeroRows = (0 until GRID_SIZE).filter { grid[it][column][0].intValue != 0 }
+        return if (nonZeroRows.isNotEmpty()) nonZeroRows.random() else (0 until GRID_SIZE).random()
     }
 
-    /**
-     * Records current step by adding to the steps list. After the first step is added, the button
-     * on UI activates to indicate that a user can go back to the previous step.
-     */
     private fun recordStep(
         cellWithNote: Array<MutableIntState>,
         previousCellWithNote: Array<MutableIntState>,
@@ -500,14 +414,18 @@ class SudokuViewModel: ViewModel() {
         val steps = uiState.value.steps.toMutableList()
         val selectedCellRow = uiState.value.selectedCellRow
         val selectedCellColumn = uiState.value.selectedCellColumn
+
+        val prevNotesCopy = Array(9) { mutableIntStateOf(previousCellWithNote[it].intValue) }
+        val curNotesCopy = Array(9) { mutableIntStateOf(cellWithNote[it].intValue) }
+
         steps.add(
             Step(
                 xIndex = selectedCellRow,
                 yIndex = selectedCellColumn,
-                digit = if (cellDigit != 0) cellDigit else null,
-                previousDigit = if (cellDigit != 0) previousCellDigit else null,
-                previousNotes = previousCellWithNote,
-                notes = cellWithNote
+                digit = cellDigit,
+                previousDigit = previousCellDigit,
+                previousNotes = prevNotesCopy,
+                notes = curNotesCopy
             )
         )
 
@@ -519,58 +437,80 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Recursively gets a random cell value until that cell value is 0 in both initial and user's grids.
-     * To make sure that we are only animating cells that a user didn't fill and values that are
-     * possible to fill by a user.
-     */
     private fun unlockACell(grid: Array<Array<Array<MutableIntState>>>, unlockedCell: Array<Int?>, selectionNumbers: Array<Int>) {
-        val cellId = getRandomNumber(GRID_SIZE * GRID_SIZE) - 1
-        val i = cellId / GRID_SIZE
-        val y = cellId % GRID_SIZE
-        if (grid[i][y][0].intValue == 0 && grid[i][y][2].intValue == 0) {
-            val digitToInsert = grid[i][y][1].intValue
-            grid[i][y][0].intValue = digitToInsert
-            grid[i][y][2].intValue = digitToInsert
-            unlockedCell[0] = i
-            unlockedCell[1] = y
+        val emptyCells = mutableListOf<Pair<Int, Int>>()
+        for (i in 0 until GRID_SIZE) {
+            for (j in 0 until GRID_SIZE) {
+                if (grid[i][j][0].intValue == 0 && grid[i][j][2].intValue == 0) {
+                    emptyCells.add(Pair(i, j))
+                }
+            }
+        }
+        if (emptyCells.isEmpty()) return
+
+        val (i, y) = emptyCells.random()
+        val digitToInsert = grid[i][y][1].intValue
+        grid[i][y][0].intValue = digitToInsert
+        grid[i][y][2].intValue = digitToInsert
+        unlockedCell[0] = i
+        unlockedCell[1] = y
+        if (digitToInsert in 1..9) {
             selectionNumbers[digitToInsert - 1]--
-        } else {
-            unlockACell(grid, unlockedCell, selectionNumbers)
         }
     }
 
-    /**
-     * Inserts a selected digit into user's grid only if the selected cell's value in the initial grid
-     * is 0. Records a step after that.
-     */
+    private fun autoClearNotes(row: Int, column: Int, digit: Int) {
+        val gridWithNotes = uiState.value.matrixWithNotes
+        val noteIndex = digit - 1
+
+        for (c in 0 until GRID_SIZE) {
+            gridWithNotes[row][c][noteIndex].intValue = 0
+        }
+        for (r in 0 until GRID_SIZE) {
+            gridWithNotes[r][column][noteIndex].intValue = 0
+        }
+        val boxRowStart = row - row % GRID_SIZE_SQUARE_ROOT
+        val boxColStart = column - column % GRID_SIZE_SQUARE_ROOT
+        for (r in 0 until GRID_SIZE_SQUARE_ROOT) {
+            for (c in 0 until GRID_SIZE_SQUARE_ROOT) {
+                gridWithNotes[boxRowStart + r][boxColStart + c][noteIndex].intValue = 0
+            }
+        }
+    }
+
     private fun insertDigit(selectedDigit: Int = 0) {
         val grid = uiState.value.matrix
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
-        val selectionNumbers = uiState.value.selectionNumbers
+        val selectionNumbers = uiState.value.selectionNumbers.copyOf()
         var mistakesNum = uiState.value.mistakesNum
-        val previousCellDigit: Int?
         val isNotCurrentValue = grid[row][column][2].intValue != selectedDigit
+
         if (grid[row][column][0].intValue == 0 && isNotCurrentValue) {
-            previousCellDigit = grid[row][column][2].intValue
-            if (grid[row][column][1].intValue != selectedDigit) {
+            val previousCellDigit = grid[row][column][2].intValue
+            val isCorrect = grid[row][column][1].intValue == selectedDigit
+            if (!isCorrect) {
                 mistakesNum++
+            } else if (selectedDigit in 1..9) {
+                autoClearNotes(row, column, selectedDigit)
             }
 
-            val isEmptyCell = grid[row][column][2].intValue != 0
-            if (isEmptyCell) {
-                selectionNumbers[grid[row][column][2].intValue - 1]++
+            if (previousCellDigit in 1..9) {
+                selectionNumbers[previousCellDigit - 1]++
             }
 
-            selectionNumbers[selectedDigit - 1]--
+            if (selectedDigit in 1..9) {
+                selectionNumbers[selectedDigit - 1]--
+            }
 
             grid[row][column][2].intValue = selectedDigit
+
+            val previousCellWithNote = Array(9) { mutableIntStateOf(uiState.value.matrixWithNotes[row][column][it].intValue) }
 
             recordStep(
                 cellDigit = selectedDigit,
                 previousCellDigit = previousCellDigit,
-                previousCellWithNote = uiState.value.matrixWithNotes[row][column],
+                previousCellWithNote = previousCellWithNote,
                 cellWithNote = uiState.value.matrixWithNotes[row][column],
             )
 
@@ -585,13 +525,6 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-    /**
-     * Inserts a selected digit into user's grid as note only if the selected cell's value in the initial grid
-     * is 0. Records a step after that.
-     *
-     * Note: only values that are possible to insert for notes are going to reach this function
-     * @see canInsert
-     */
     private fun insertNoteDigit(digit: Int) {
         val gridWithNotes = uiState.value.matrixWithNotes
         val row = uiState.value.selectedCellRow
@@ -620,10 +553,6 @@ class SudokuViewModel: ViewModel() {
         }
     }
 
-
-    /**
-     * Gets a random number to help with randomising the cell when filling.
-     */
     private fun getRandomNumber(multiplyBy: Int): Int {
         return floor((Math.random() * multiplyBy + 1)).toInt()
     }

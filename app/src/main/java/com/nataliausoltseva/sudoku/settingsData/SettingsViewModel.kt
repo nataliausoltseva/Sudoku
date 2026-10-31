@@ -3,10 +3,12 @@ package com.nataliausoltseva.sudoku.settingsData
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,20 +17,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
 class SettingsViewModel(
-    private val context: Context
-): ViewModel() {
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+    context: Context
+) : ViewModel() {
+    private val appContext = context.applicationContext
     private val THEME_KEY = stringPreferencesKey("theme")
+    private val HAPTIC_KEY = booleanPreferencesKey("haptic_feedback")
 
     private val _uiState = MutableStateFlow(SettingsState())
     val uiState: StateFlow<SettingsState> = _uiState.asStateFlow()
 
-    /**
-     * Saves the state what a user wants to allow for the current game state.
-     * Theme is saved to datastore, so that next time a user enters the application, they do not have
-     * to select it again. Other settings are dependent on the game and will be reset.
-     */
     fun onSave(
         showMistakes: Boolean,
         hasMistakeCounter: Boolean,
@@ -36,6 +36,7 @@ class SettingsViewModel(
         hasHighlightSameNumbers: Boolean,
         hasRowHighlight: Boolean,
         hasTimer: Boolean,
+        hapticFeedbackEnabled: Boolean,
     ) {
         _uiState.update {
             it.copy(
@@ -44,39 +45,46 @@ class SettingsViewModel(
                 theme = theme,
                 hasHighlightSameNumbers = hasHighlightSameNumbers,
                 hasRowHighlight = hasRowHighlight,
-                hasTimer = hasTimer
+                hasTimer = hasTimer,
+                hapticFeedbackEnabled = hapticFeedbackEnabled
             )
         }
 
         viewModelScope.launch {
-            saveTheme(theme)
+            saveThemeAndHaptics(theme, hapticFeedbackEnabled)
         }
     }
 
-    /**
-     * Tries to get a theme from datastore. If datastore was not created, returns system theme.
-     */
-    private suspend fun readTheme(): String {
-        val settings = context.dataStore.data.first()
-        return settings[THEME_KEY] ?: THEMES[0]
+    private suspend fun readSettings(): Pair<String, Boolean> {
+        val settings = appContext.dataStore.data.first()
+        val theme = settings[THEME_KEY] ?: THEMES[0]
+        val haptic = settings[HAPTIC_KEY] ?: true
+        return Pair(theme, haptic)
     }
 
-    /**
-     * Saves the selected theme into datastore.
-     */
-    private suspend fun saveTheme(theme: String) {
-        context.dataStore.edit { settings ->
+    private suspend fun saveThemeAndHaptics(theme: String, haptic: Boolean) {
+        appContext.dataStore.edit { settings ->
             settings[THEME_KEY] = theme
+            settings[HAPTIC_KEY] = haptic
         }
     }
 
     init {
         viewModelScope.launch {
+            val (savedTheme, savedHaptic) = readSettings()
             _uiState.update {
                 it.copy(
-                    theme = readTheme()
+                    theme = savedTheme,
+                    hapticFeedbackEnabled = savedHaptic
                 )
             }
+        }
+    }
+
+    class Factory(private val context: Context) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SettingsViewModel(context) as T
         }
     }
 }

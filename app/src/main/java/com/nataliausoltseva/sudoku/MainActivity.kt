@@ -14,6 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,17 +66,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
 import com.nataliausoltseva.sudoku.settingsData.THEMES
@@ -92,10 +103,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val context = LocalContext.current
-            val settingsViewModel = remember { SettingsViewModel(context) }
-            val sudokuViewModel = remember { SudokuViewModel() }
-            val timerViewModel = remember { TimerViewModel() }
+            val context = LocalContext.current.applicationContext
+            val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(context))
+            val sudokuViewModel: SudokuViewModel = viewModel()
+            val timerViewModel: TimerViewModel = viewModel()
             val orientation = LocalConfiguration.current.orientation
             val view = LocalView.current
             view.windowInsetsController?.hide(android.view.WindowInsets.Type.systemBars())
@@ -122,12 +133,17 @@ fun MainApp(
     val settingsUIState by settingsViewModel.uiState.collectAsState()
     val showSettings = remember { mutableStateOf(false) }
     val isRestartClicked = remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
 
     val view = LocalView.current
     LaunchedEffect(sudokuUIState.mistakesNum) {
-        if (sudokuUIState.mistakesNum > 0) {
+        if (sudokuUIState.mistakesNum > 0 && settingsUIState.hapticFeedbackEnabled) {
             view.performHapticFeedback(HapticFeedbackConstants.REJECT)
         }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 
     val context = LocalContext.current
@@ -136,7 +152,53 @@ fun MainApp(
     SudokuTheme(
         darkTheme = settingsUIState.theme == "dark" || (settingsUIState.theme == "system" && isSystemInDarkTheme())
     ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && sudokuUIState.hasStarted && !sudokuUIState.isPaused) {
+                        when (event.key) {
+                            Key.One, Key.NumPad1 -> { sudokuViewModel.onSelection(1, sudokuViewModel.canInsert(1)); true }
+                            Key.Two, Key.NumPad2 -> { sudokuViewModel.onSelection(2, sudokuViewModel.canInsert(2)); true }
+                            Key.Three, Key.NumPad3 -> { sudokuViewModel.onSelection(3, sudokuViewModel.canInsert(3)); true }
+                            Key.Four, Key.NumPad4 -> { sudokuViewModel.onSelection(4, sudokuViewModel.canInsert(4)); true }
+                            Key.Five, Key.NumPad5 -> { sudokuViewModel.onSelection(5, sudokuViewModel.canInsert(5)); true }
+                            Key.Six, Key.NumPad6 -> { sudokuViewModel.onSelection(6, sudokuViewModel.canInsert(6)); true }
+                            Key.Seven, Key.NumPad7 -> { sudokuViewModel.onSelection(7, sudokuViewModel.canInsert(7)); true }
+                            Key.Eight, Key.NumPad8 -> { sudokuViewModel.onSelection(8, sudokuViewModel.canInsert(8)); true }
+                            Key.Nine, Key.NumPad9 -> { sudokuViewModel.onSelection(9, sudokuViewModel.canInsert(9)); true }
+                            Key.DirectionUp -> {
+                                val nextRow = (sudokuUIState.selectedCellRow - 1 + 9) % 9
+                                sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
+                                true
+                            }
+                            Key.DirectionDown -> {
+                                val nextRow = (sudokuUIState.selectedCellRow + 1) % 9
+                                sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
+                                true
+                            }
+                            Key.DirectionLeft -> {
+                                val nextCol = (sudokuUIState.selectedCellColumn - 1 + 9) % 9
+                                sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
+                                true
+                            }
+                            Key.DirectionRight -> {
+                                val nextCol = (sudokuUIState.selectedCellColumn + 1) % 9
+                                sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
+                                true
+                            }
+                            Key.N -> { sudokuViewModel.onNote(); true }
+                            Key.Backspace, Key.Delete -> { sudokuViewModel.onErase(); true }
+                            Key.U -> { if (sudokuUIState.hasSteps) sudokuViewModel.onUndo(); true }
+                            Key.H -> { if (sudokuUIState.hintNum > 0) sudokuViewModel.useHint(); true }
+                            else -> false
+                        }
+                    } else false
+                },
+            color = MaterialTheme.colorScheme.background
+        ) {
             if (sudokuUIState.isPaused) {
                 BasicAlertDialog(
                     onDismissRequest = {},
@@ -190,13 +252,15 @@ fun MainApp(
                     )
                     KonfettiUI()
                     LaunchedEffect(true) {
-                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
-                        delay(500)
-                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
-                        delay(1000)
-                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
-                        delay(500)
-                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        if (settingsUIState.hapticFeedbackEnabled) {
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            delay(500)
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            delay(1000)
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            delay(500)
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        }
                     }
                 } else {
                     if (showSettings.value) {
@@ -207,6 +271,7 @@ fun MainApp(
                             hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
                             hasRowHighlight = settingsUIState.hasRowHighlight,
                             hasTimer = settingsUIState.hasTimer,
+                            hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
                             theme = settingsUIState.theme,
                             onSave = {
                                     newShowMistakes: Boolean,
@@ -215,6 +280,7 @@ fun MainApp(
                                     newHasHighlightSameNumbers: Boolean,
                                     newHasRowHighlight: Boolean,
                                     newHasTimer: Boolean,
+                                    newHapticFeedbackEnabled: Boolean,
                                 ->
                                 settingsViewModel.onSave(
                                     newShowMistakes,
@@ -222,7 +288,8 @@ fun MainApp(
                                     newTheme,
                                     newHasHighlightSameNumbers,
                                     newHasRowHighlight,
-                                    newHasTimer
+                                    newHasTimer,
+                                    newHapticFeedbackEnabled
                                 )
                                 if (newHasTimer) {
                                     timerViewModel.startTimer()
@@ -290,6 +357,7 @@ fun MainApp(
                                         cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
                                         canInsert = { sudokuViewModel.canInsert(it) },
                                         isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                        hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
                                     )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -363,6 +431,7 @@ fun MainApp(
                                         cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
                                         canInsert = { sudokuViewModel.canInsert(it) },
                                         isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                        hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
                                     )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -385,7 +454,6 @@ fun MainApp(
             }
         }
     }
-
 }
 
 @Composable
@@ -394,7 +462,9 @@ fun KonfettiUI(viewModel: KonfettiViewModel = KonfettiViewModel()) {
         KonfettiViewModel.State.Idle,
     )
 
-    viewModel.rain()
+    LaunchedEffect(Unit) {
+        viewModel.rain()
+    }
 
     when (val newState = state) {
         KonfettiViewModel.State.Idle -> {}
@@ -508,6 +578,7 @@ fun Settings(
     hasHighlightSameNumbers: Boolean,
     hasRowHighlight: Boolean,
     hasTimer: Boolean,
+    hapticFeedbackEnabled: Boolean,
     theme: String,
     onSave: (
         showMistakes: Boolean,
@@ -516,6 +587,7 @@ fun Settings(
         hasHighlightSameNumbers: Boolean,
         hasRowHighlight: Boolean,
         hasTimer: Boolean,
+        hapticFeedbackEnabled: Boolean,
     ) -> Unit
 ) {
     val newTheme = remember { mutableStateOf(theme) }
@@ -524,6 +596,7 @@ fun Settings(
     val newHasRowHighlight = remember { mutableStateOf(hasRowHighlight) }
     val newHasTimer = remember { mutableStateOf(hasTimer) }
     val newHasHighlightSameNumbers = remember { mutableStateOf(hasHighlightSameNumbers) }
+    val newHapticFeedback = remember { mutableStateOf(hapticFeedbackEnabled) }
 
     BasicAlertDialog(
         onDismissRequest = {},
@@ -605,6 +678,19 @@ fun Settings(
                     )
                 }
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                ) {
+                    Text(text = "Haptic Feedback")
+                    Switch(
+                        checked = newHapticFeedback.value,
+                        onCheckedChange = { isChecked -> newHapticFeedback.value = isChecked }
+                    )
+                }
+                Row(
                     verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
@@ -665,6 +751,7 @@ fun Settings(
                             newHasHighlightSameNumbers.value,
                             newHasRowHighlight.value,
                             newHasTimer.value,
+                            newHapticFeedback.value,
                         )
                         onCancel()
                     },
@@ -815,12 +902,36 @@ fun SudokuGrid(
                         val orientation = LocalConfiguration.current.orientation
                         val cellSize = if (orientation == Configuration.ORIENTATION_LANDSCAPE) LocalConfiguration.current.screenHeightDp.dp / (9)
                             else LocalConfiguration.current.screenWidthDp.dp / (9+1)
+
+                        val cellDescription = buildString {
+                            append("Row ${row + 1}, Column ${index + 1}. ")
+                            if (gridValue != 0) {
+                                append("Value $gridValue. ")
+                                if (grid[row][index][0].intValue != 0) {
+                                    append("Given digit.")
+                                } else {
+                                    append("Entered digit.")
+                                }
+                            } else {
+                                val activeNotes = gridWithNotes[row][index].filter { it.intValue > 0 }.map { it.intValue }
+                                if (activeNotes.isNotEmpty()) {
+                                    append("Notes: ${activeNotes.joinToString(", ")}.")
+                                } else {
+                                    append("Empty cell.")
+                                }
+                            }
+                            if (isCurrentCell) {
+                                append(" Selected.")
+                            }
+                        }
+
                         Column (
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .size(cellSize)
                                 .background(backgroundCellColour)
+                                .semantics { contentDescription = cellDescription }
                                 .clickable { onSelectCell(row, index) }
                                 .drawBehind {
                                     val hasVerticalOutline =
@@ -990,7 +1101,8 @@ fun SelectionNumbers(
     onSelection: (number: Int, canInsert: Boolean) -> Unit,
     cannotInsert: Boolean,
     canInsert: (number: Int) -> Boolean,
-    isNotesEnabled: Boolean
+    isNotesEnabled: Boolean,
+    hapticFeedbackEnabled: Boolean = true,
 ) {
     val isClicked = remember { mutableStateOf(false) }
     val isInsertable = remember { mutableStateOf(false) }
@@ -1009,30 +1121,35 @@ fun SelectionNumbers(
     val context = LocalContext.current
     val vibrator = context.getSystemService(Vibrator::class.java)
     LaunchedEffect(isClicked.value) {
-        if (isClicked.value) {
+        if (isClicked.value && hapticFeedbackEnabled) {
             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
             isClicked.value = false
         }
     }
     Row(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         for (i in 0 until 9) {
             val label = i + 1
-            val isAvailable = selectionNumbers[i] > 0 || isNotesEnabled
-            var labelColor = MaterialTheme.colorScheme.inversePrimary
-            if (isAvailable) {
-                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-            }
+            val isCountAvailable = selectionNumbers[i] > 0
+            val isAvailable = isCountAvailable || isNotesEnabled
+            val isCompleted = selectionNumbers[i] == 0
+
+            val labelColor = if (isCompleted) MaterialTheme.colorScheme.outline
+                else if (isAvailable) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.inversePrimary
 
             Surface(
                 onClick = { onSelect(label) },
                 enabled = isAvailable,
+                modifier = Modifier.weight(1f)
             ) {
                 val displayValue = label.toString()
                 Text(
                     text = displayValue,
-                    Modifier.padding(20.dp),
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    textAlign = TextAlign.Center,
                     color = labelColor
                 )
             }

@@ -9,4 +9,5 @@ data class SettingsState(
     val hasHighlightSameNumbers: Boolean = true,
     val hasRowHighlight: Boolean = true,
     val hasTimer: Boolean = true,
+    val hapticFeedbackEnabled: Boolean = true,
 )

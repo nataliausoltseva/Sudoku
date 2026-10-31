@@ -19,6 +19,8 @@ data class Step(
         if (xIndex != other.xIndex) return false
         if (yIndex != other.yIndex) return false
         if (digit != other.digit) return false
+        if (previousDigit != other.previousDigit) return false
+        if (!previousNotes.contentEquals(other.previousNotes)) return false
         if (!notes.contentEquals(other.notes)) return false
 
         return true
@@ -28,6 +30,8 @@ data class Step(
         var result = xIndex
         result = 31 * result + yIndex
         result = 31 * result + (digit ?: 0)
+        result = 31 * result + (previousDigit ?: 0)
+        result = 31 * result + previousNotes.contentHashCode()
         result = 31 * result + notes.contentHashCode()
         return result
     }
