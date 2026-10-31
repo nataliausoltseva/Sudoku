@@ -1,64 +1,48 @@
 # Sudoku
-This game is written in Kotlin using Jetpack Compose. DataStore was used to store the theme value - light/dark or based on the system.
 
-As part of this project, custom android icon was produced that supports monochrome. Also, it offers predictive back gesture.
+This game is written in Kotlin using Jetpack Compose with Material 3. DataStore is used to persist settings and theme choices (System, Light, or Dark).
 
-The app offers dark/light mode based on the user's selection but also offers landcape or portrait layout.
+It features an editorial, paper-like warm aesthetic, adaptive edge-to-edge support, predictive back gestures, tactile keypad controls, and portrait / landscape layouts optimized for mobile devices.
 
-## How to use it
-### Landing page
-<img src="./screenshots/dark-mode-starting-screen.png" style="height: '500px';"  alt=""/>
+---
 
-Select a level you would like to try winning. Based on the level, more empty cells are going to be available to fill in.
+## 📸 Screenshots
 
-### Grid view
-<img src="./screenshots/dark-mode-grid-view.png" style="height: '500px';"  alt="" />
-<img src="./screenshots/light-mode-grid-view.png" style="height: '500px';"  alt=""/>
+### Puzzle Level Selection
+<img src="./screenshots/mode-selection.png" width="300" alt="Puzzle Level Selection" />
 
-In the top row, you can see a restart icon that will take you to the level selection, which can be cancelled any time and you will be returned to your current game. Then a settings button, that will allow you to toggle on/off the following indicators, it also includes switching the theme:
+Choose your puzzle difficulty (Easy, Medium, Hard, Expert).
 
-- show mistakes
-    - if selected, a wrong number is going to be highlighted in red
-- count mistakes
-    - if selected, the top row will indicate how many errors were made, after 3 mistakes the game will be over
-- highlight same numbers
-    - if selected, all numbers that are the same as the current selected cell will be highlighted
-- highlight rows
-    - if seletcted, the vertical and horizontal row is going to be highlighted for the selected cell
-- include timer
-    - if selected, the timer is going to be included as part of the game and be shown in the end screen.
+### Grid View & Cell Interaction
+| Grid Overview | Cell Selected & Highlights |
+| :---: | :---: |
+| <img src="./screenshots/grid-view-no-selection.png" width="300" alt="Grid Overview" /> | <img src="./screenshots/grid-view-selection.png" width="300" alt="Grid Selection & Highlights" /> |
 
-In the next row, you can see the level of the current game, how many mistakes were made and timer which you can pause.
+- **Warm Editorial Surface**: Pure white 9x9 board on alabaster paper background with crisp hairline cell dividers and rounded outer container.
+- **Given vs User Numbers**: Pre-filled numbers are rendered in bold near-black text (`FontWeight.Bold`), while user-entered numbers appear in a distinct slate blue (`FontWeight.Medium`).
+- **Tactile Keypad & Action Dock**: Digits 1–9 presented as tall cards with remaining counts. Action toolbar provides Undo, Erase, Notes (with an active "ON" pill indicator), and Hints.
 
-Below the grid, you can see the action buttons for the game (from left to right):
-- Undo
-    - Only available if a game was started and at least 1 step was made. All steps will be included - erase, insertings notes, inserting digitss.
-- Erase
-    - Inserted digits/notes will be erased from a selected cell.
-- Notes
-    - Allows to insert 1-9 digits into any cell. The insertion will be prevented if the selected digit already exists vertically/horizontally or in 3x3 box for the selected cell. An animation is going to scale those digits too, to indicate it clearer.
-- Hint
-    - Every game allows to use 3 hints that will unlock random 3 cells.
+### Error Checking & Feedback
+<img src="./screenshots/grid-view-error-indication.png" width="300" alt="Error Checking" />
 
-#### Restart
-<img src="./screenshots/light-mode-level-selection.png" style="height: '500px';"  alt=""/>
+When auto-check mistakes is enabled, wrong entries are highlighted in a soft coral background with crimson text and a 2.dp stroke overlay when selected.
 
-#### Settings:
-<img src="./screenshots/light-mode-settings.png" style="height: '500px';"  alt=""/>
-<img src="./screenshots/dark-mode-settings.png" style="height: '500px';"  alt=""/>
+### Settings & Real-Time Customization
+<img src="./screenshots/settings.png" width="300" alt="Settings Dialog" />
 
-#### Paused game
-<img src="./screenshots/light-mode-pause-dialog.png" style="height: '500px';"  alt=""/>
+Modern reactive settings dialog with instant real-time updates:
+- **Auto-check mistakes**: Main toggle for error validation.
+- **Mistake limit (3 strikes)**: Dependent sub-toggle for 3-strike game over mode.
+- **Highlight same numbers**: Highlights matching digits across the grid.
+- **Highlight row & column**: Soft warm gray highlight for row, column, and 3x3 box.
+- **Show timer**: Toggles the top timer pill badge.
+- **Haptic feedback**: Tactile vibration feedback on input.
+- **Theme**: 3-Way Segmented Control ("System", "Light", "Dark").
 
-### Lose Screen
-<img src="./screenshots/lose-screen.png" style="height: '500px';"  alt=""/>
+### Victory & Celebration
+<img src="./screenshots/end-screen.png" width="300" alt="End Screen & Victory Celebration" />
 
-When you make 3 mistakes, the game is over (only if you enabled it from the settings).
-
-### End Screen
-<img src="./screenshots/end-screen.png" style="height: '500px';"  alt=""/>
-
-Once you have insterted all digits correctly, you won the game. It uses [Konfetti](https://github.com/DanielMartinus/Konfetti). From this screen, you can start new game. All settings for the game are going to be reset, except theme. Theme is saved by DataStore.
+Celebrates puzzle completion with [Konfetti](https://github.com/DanielMartinus/Konfetti) particle animations and game summary pill badges.
 
 ---
 

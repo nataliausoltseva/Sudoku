@@ -84,7 +84,7 @@ class SudokuViewModel : ViewModel() {
         }
     }
 
-    fun onSelection(digit: Int, canInsert: Boolean) {
+    fun onSelection(digit: Int, canInsert: Boolean, showMistakes: Boolean = true) {
         _uiState.update {
             it.copy(
                 selectedDigit = digit,
@@ -95,7 +95,7 @@ class SudokuViewModel : ViewModel() {
             if (uiState.value.isNotesEnabled) {
                 insertNoteDigit(digit)
             } else {
-                insertDigit(digit)
+                insertDigit(digit, showMistakes = showMistakes)
             }
         }
     }
@@ -478,7 +478,7 @@ class SudokuViewModel : ViewModel() {
         }
     }
 
-    private fun insertDigit(selectedDigit: Int = 0) {
+    private fun insertDigit(selectedDigit: Int = 0, showMistakes: Boolean = true) {
         val grid = uiState.value.matrix
         val row = uiState.value.selectedCellRow
         val column = uiState.value.selectedCellColumn
@@ -489,9 +489,9 @@ class SudokuViewModel : ViewModel() {
         if (grid[row][column][0].intValue == 0 && isNotCurrentValue) {
             val previousCellDigit = grid[row][column][2].intValue
             val isCorrect = grid[row][column][1].intValue == selectedDigit
-            if (!isCorrect) {
+            if (!isCorrect && showMistakes) {
                 mistakesNum++
-            } else if (selectedDigit in 1..9) {
+            } else if (isCorrect && selectedDigit in 1..9) {
                 autoClearNotes(row, column, selectedDigit)
             }
 

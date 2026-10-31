@@ -20,14 +20,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Edit
@@ -40,16 +45,12 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -66,11 +67,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -89,10 +93,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nataliausoltseva.sudoku.konfettiData.KonfettiViewModel
 import com.nataliausoltseva.sudoku.settingsData.SettingsViewModel
-import com.nataliausoltseva.sudoku.settingsData.THEMES
 import com.nataliausoltseva.sudoku.sudokaData.LEVELS
 import com.nataliausoltseva.sudoku.sudokaData.SudokuViewModel
 import com.nataliausoltseva.sudoku.timerData.TimerViewModel
+import com.nataliausoltseva.sudoku.ui.theme.NotesTextDark
+import com.nataliausoltseva.sudoku.ui.theme.NotesTextLight
 import com.nataliausoltseva.sudoku.ui.theme.SudokuTheme
 import kotlinx.coroutines.delay
 import nl.dionsegijn.konfetti.compose.KonfettiView
@@ -109,15 +114,6 @@ class MainActivity : ComponentActivity() {
             val sudokuViewModel: SudokuViewModel = viewModel()
             val timerViewModel: TimerViewModel = viewModel()
             val orientation = LocalConfiguration.current.orientation
-            val view = LocalView.current
-            androidx.compose.runtime.SideEffect {
-                val window = (view.context as? android.app.Activity)?.window
-                if (window != null) {
-                    val controller = androidx.core.view.WindowCompat.getInsetsController(window, view)
-                    controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                    controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            }
             MainApp(
                 settingsViewModel,
                 sudokuViewModel,
@@ -156,6 +152,13 @@ private fun triggerVibration(vibrator: Vibrator?) {
     }
 }
 
+private fun formatThemeName(themeName: String): String = when (themeName.lowercase()) {
+    "light" -> "Light"
+    "dark" -> "Dark"
+    "system" -> "System"
+    else -> themeName.replaceFirstChar { it.uppercase() }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(
@@ -172,7 +175,7 @@ fun MainApp(
 
     val view = LocalView.current
     LaunchedEffect(sudokuUIState.mistakesNum) {
-        if (sudokuUIState.mistakesNum > 0 && settingsUIState.hapticFeedbackEnabled) {
+        if (sudokuUIState.mistakesNum > 0 && settingsUIState.hapticFeedbackEnabled && settingsUIState.showMistakes) {
             view.performHapticFeedback(HapticFeedbackConstants.REJECT)
         }
     }
@@ -188,75 +191,82 @@ fun MainApp(
         darkTheme = settingsUIState.theme == "dark" || (settingsUIState.theme == "system" && isSystemInDarkTheme())
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(focusRequester)
-                .focusable()
-                .onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && sudokuUIState.hasStarted && !sudokuUIState.isPaused) {
-                        when (event.key) {
-                            Key.One, Key.NumPad1 -> { sudokuViewModel.onSelection(1, sudokuViewModel.canInsert(1)); true }
-                            Key.Two, Key.NumPad2 -> { sudokuViewModel.onSelection(2, sudokuViewModel.canInsert(2)); true }
-                            Key.Three, Key.NumPad3 -> { sudokuViewModel.onSelection(3, sudokuViewModel.canInsert(3)); true }
-                            Key.Four, Key.NumPad4 -> { sudokuViewModel.onSelection(4, sudokuViewModel.canInsert(4)); true }
-                            Key.Five, Key.NumPad5 -> { sudokuViewModel.onSelection(5, sudokuViewModel.canInsert(5)); true }
-                            Key.Six, Key.NumPad6 -> { sudokuViewModel.onSelection(6, sudokuViewModel.canInsert(6)); true }
-                            Key.Seven, Key.NumPad7 -> { sudokuViewModel.onSelection(7, sudokuViewModel.canInsert(7)); true }
-                            Key.Eight, Key.NumPad8 -> { sudokuViewModel.onSelection(8, sudokuViewModel.canInsert(8)); true }
-                            Key.Nine, Key.NumPad9 -> { sudokuViewModel.onSelection(9, sudokuViewModel.canInsert(9)); true }
-                            Key.DirectionUp -> {
-                                val nextRow = (sudokuUIState.selectedCellRow - 1 + 9) % 9
-                                sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
-                                true
-                            }
-                            Key.DirectionDown -> {
-                                val nextRow = (sudokuUIState.selectedCellRow + 1) % 9
-                                sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
-                                true
-                            }
-                            Key.DirectionLeft -> {
-                                val nextCol = (sudokuUIState.selectedCellColumn - 1 + 9) % 9
-                                sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
-                                true
-                            }
-                            Key.DirectionRight -> {
-                                val nextCol = (sudokuUIState.selectedCellColumn + 1) % 9
-                                sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
-                                true
-                            }
-                            Key.N -> { sudokuViewModel.onNote(); true }
-                            Key.Backspace, Key.Delete -> { sudokuViewModel.onErase(); true }
-                            Key.U -> { if (sudokuUIState.hasSteps) sudokuViewModel.onUndo(); true }
-                            Key.H -> { if (sudokuUIState.hintNum > 0) sudokuViewModel.useHint(); true }
-                            else -> false
-                        }
-                    } else false
-                },
+            modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .displayCutoutPadding()
+                    .focusRequester(focusRequester)
+                    .focusable()
+                    .onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && sudokuUIState.hasStarted && !sudokuUIState.isPaused) {
+                            when (event.key) {
+                                Key.One, Key.NumPad1 -> { sudokuViewModel.onSelection(1, sudokuViewModel.canInsert(1), settingsUIState.showMistakes); true }
+                                Key.Two, Key.NumPad2 -> { sudokuViewModel.onSelection(2, sudokuViewModel.canInsert(2), settingsUIState.showMistakes); true }
+                                Key.Three, Key.NumPad3 -> { sudokuViewModel.onSelection(3, sudokuViewModel.canInsert(3), settingsUIState.showMistakes); true }
+                                Key.Four, Key.NumPad4 -> { sudokuViewModel.onSelection(4, sudokuViewModel.canInsert(4), settingsUIState.showMistakes); true }
+                                Key.Five, Key.NumPad5 -> { sudokuViewModel.onSelection(5, sudokuViewModel.canInsert(5), settingsUIState.showMistakes); true }
+                                Key.Six, Key.NumPad6 -> { sudokuViewModel.onSelection(6, sudokuViewModel.canInsert(6), settingsUIState.showMistakes); true }
+                                Key.Seven, Key.NumPad7 -> { sudokuViewModel.onSelection(7, sudokuViewModel.canInsert(7), settingsUIState.showMistakes); true }
+                                Key.Eight, Key.NumPad8 -> { sudokuViewModel.onSelection(8, sudokuViewModel.canInsert(8), settingsUIState.showMistakes); true }
+                                Key.Nine, Key.NumPad9 -> { sudokuViewModel.onSelection(9, sudokuViewModel.canInsert(9), settingsUIState.showMistakes); true }
+                                Key.DirectionUp -> {
+                                    val nextRow = (sudokuUIState.selectedCellRow - 1 + 9) % 9
+                                    sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
+                                    true
+                                }
+                                Key.DirectionDown -> {
+                                    val nextRow = (sudokuUIState.selectedCellColumn + 1) % 9
+                                    sudokuViewModel.onSelectCell(nextRow, sudokuUIState.selectedCellColumn)
+                                    true
+                                }
+                                Key.DirectionLeft -> {
+                                    val nextCol = (sudokuUIState.selectedCellColumn - 1 + 9) % 9
+                                    sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
+                                    true
+                                }
+                                Key.DirectionRight -> {
+                                    val nextCol = (sudokuUIState.selectedCellColumn + 1) % 9
+                                    sudokuViewModel.onSelectCell(sudokuUIState.selectedCellRow, nextCol)
+                                    true
+                                }
+                                Key.N -> { sudokuViewModel.onNote(); true }
+                                Key.Backspace, Key.Delete -> { sudokuViewModel.onErase(); true }
+                                Key.U -> { if (sudokuUIState.hasSteps) sudokuViewModel.onUndo(); true }
+                                Key.H -> { if (sudokuUIState.hintNum > 0) sudokuViewModel.useHint(); true }
+                                else -> false
+                            }
+                        } else false
+                    }
+            ) {
             if (sudokuUIState.isPaused) {
                 BasicAlertDialog(
                     onDismissRequest = {},
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.large)
-                        .background(MaterialTheme.colorScheme.onPrimary)
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(6.dp)
+                        modifier = Modifier.padding(24.dp)
                     ) {
                         Text(
                             text = "Paused",
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
                         TextButton(
                             onClick = {
                                 timerViewModel.startTimer()
                                 sudokuViewModel.onStart()
                             },
-                            modifier = Modifier.padding(8.dp),
                         ) {
-                            Text("Continue")
+                            Text("Continue", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -300,9 +310,10 @@ fun MainApp(
                 } else {
                     if (showSettings.value) {
                         Settings(
-                            onCancel = { showSettings.value = false },
+                            onDismiss = { showSettings.value = false },
                             showMistakes = settingsUIState.showMistakes,
                             hasMistakeCounter = settingsUIState.hasMistakeCounter,
+                            mistakesNum = sudokuUIState.mistakesNum,
                             hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
                             hasRowHighlight = settingsUIState.hasRowHighlight,
                             hasTimer = settingsUIState.hasTimer,
@@ -319,7 +330,7 @@ fun MainApp(
                                 ->
                                 settingsViewModel.onSave(
                                     newShowMistakes,
-                                    newHasMistakesCount,
+                                    if (newShowMistakes) newHasMistakesCount else false,
                                     newTheme,
                                     newHasHighlightSameNumbers,
                                     newHasRowHighlight,
@@ -334,120 +345,27 @@ fun MainApp(
                             },
                         )
                     }
-                    val currentCell =  sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue
+                    val currentCell = sudokuUIState.matrix[sudokuUIState.selectedCellRow][sudokuUIState.selectedCellColumn][2].intValue
                     if (isLandscape) {
-                        Row {
-                            Row {
-                                Column(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    SudokuGrid(
-                                        grid = sudokuUIState.matrix,
-                                        selectedCellRow = sudokuUIState.selectedCellRow,
-                                        selectedCellColumn = sudokuUIState.selectedCellColumn,
-                                        hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                        onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
-                                        hasRowHighlight = settingsUIState.hasRowHighlight,
-                                        isPaused = sudokuUIState.isPaused,
-                                        showMistakes = settingsUIState.showMistakes,
-                                        unlockedCell = sudokuUIState.unlockedCell,
-                                        gridWithNotes = sudokuUIState.matrixWithNotes,
-                                        selectedDigit = sudokuUIState.selectedDigit,
-                                        onBoxCheck = { sudokuViewModel.isUnusedInBox() },
-                                        onRowCheck = { sudokuViewModel.isUnusedInRow() },
-                                        onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
-                                        isNotesEnabled = sudokuUIState.isNotesEnabled
-                                    )
-                                }
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        GameIndications(
-                                            timerViewModel = timerViewModel,
-                                            selectedLevel = sudokuUIState.selectedLevel,
-                                            hasMistakeCounter = settingsUIState.hasMistakeCounter,
-                                            mistakesNum = sudokuUIState.mistakesNum,
-                                            onRegenerate = { sudokuViewModel.onRegenerate() },
-                                            hasTimer = settingsUIState.hasTimer,
-                                            isPaused = sudokuUIState.isPaused,
-                                            onPause = {
-                                                sudokuViewModel.onPause()
-                                                timerViewModel.pauseTimer()
-                                            }
-                                        )
-                                        SettingsBar(onShowSettings = { showSettings.value = true }) {
-                                            RestartButton(onRestart = {
-                                                timerViewModel.stopTimer()
-                                                isRestartClicked.value = true
-                                            })
-                                        }
-                                    }
-                                    SelectionNumbers(
-                                        selectionNumbers = sudokuUIState.selectionNumbers,
-                                        onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
-                                        cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
-                                        canInsert = { sudokuViewModel.canInsert(it) },
-                                        isNotesEnabled = sudokuUIState.isNotesEnabled,
-                                        hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
-                                    )
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceAround
-                                    ) {
-                                        UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
-                                        EraseButton(onErase = { sudokuViewModel.onErase() })
-                                        NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
-                                        HintsButton(
-                                            useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.hintNum
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.End
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            SettingsBar(onShowSettings = { showSettings.value = true }) {
-                                RestartButton(onRestart = {
-                                    timerViewModel.stopTimer()
-                                    isRestartClicked.value = true
-                                })
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(1f),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    GameIndications(
-                                        timerViewModel = timerViewModel,
-                                        selectedLevel = sudokuUIState.selectedLevel,
-                                        hasMistakeCounter = settingsUIState.hasMistakeCounter,
-                                        mistakesNum = sudokuUIState.mistakesNum,
-                                        onRegenerate = { sudokuViewModel.onRegenerate() },
-                                        hasTimer = settingsUIState.hasTimer,
-                                        isPaused = sudokuUIState.isPaused,
-                                        onPause = {
-                                            sudokuViewModel.onPause()
-                                            timerViewModel.pauseTimer()
-                                        }
-                                    )
-                                }
                                 SudokuGrid(
                                     grid = sudokuUIState.matrix,
                                     selectedCellRow = sudokuUIState.selectedCellRow,
                                     selectedCellColumn = sudokuUIState.selectedCellColumn,
                                     hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
-                                    onSelectCell = { row:Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
+                                    onSelectCell = { row: Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
                                     hasRowHighlight = settingsUIState.hasRowHighlight,
                                     isPaused = sudokuUIState.isPaused,
                                     showMistakes = settingsUIState.showMistakes,
@@ -457,31 +375,135 @@ fun MainApp(
                                     onBoxCheck = { sudokuViewModel.isUnusedInBox() },
                                     onRowCheck = { sudokuViewModel.isUnusedInRow() },
                                     onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
-                                    isNotesEnabled = sudokuUIState.isNotesEnabled
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    isLandscape = true
                                 )
-                                Column {
-                                    SelectionNumbers(
-                                        selectionNumbers = sudokuUIState.selectionNumbers,
-                                        onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable) },
-                                        cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
-                                        canInsert = { sudokuViewModel.canInsert(it) },
-                                        isNotesEnabled = sudokuUIState.isNotesEnabled,
-                                        hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
-                                    )
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceAround
-                                    ) {
-                                        UndoButton(sudokuUIState.hasSteps, onUndo = { sudokuViewModel.onUndo() })
-                                        EraseButton(onErase = { sudokuViewModel.onErase() })
-                                        NotesButton(sudokuUIState.isNotesEnabled, onNote = { sudokuViewModel.onNote() })
-                                        HintsButton(
-                                            useHint = { sudokuViewModel.useHint() },
-                                            hintNum = sudokuUIState.hintNum
-                                        )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(1.1f)
+                                    .padding(vertical = 4.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                GameHeaderBar(
+                                    selectedLevel = sudokuUIState.selectedLevel,
+                                    hasMistakeCounter = settingsUIState.hasMistakeCounter && settingsUIState.showMistakes,
+                                    mistakesNum = sudokuUIState.mistakesNum,
+                                    onRegenerate = { sudokuViewModel.onRegenerate() },
+                                    hasTimer = settingsUIState.hasTimer,
+                                    isPaused = sudokuUIState.isPaused,
+                                    onPause = {
+                                        sudokuViewModel.onPause()
+                                        timerViewModel.pauseTimer()
+                                    },
+                                    timerViewModel = timerViewModel,
+                                    onShowSettings = { showSettings.value = true },
+                                    onRestart = {
+                                        timerViewModel.stopTimer()
+                                        isRestartClicked.value = true
                                     }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SelectionNumbersGrid3x3(
+                                    selectionNumbers = sudokuUIState.selectionNumbers,
+                                    onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable, settingsUIState.showMistakes) },
+                                    cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
+                                    canInsert = { sudokuViewModel.canInsert(it) },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                ActionToolbar(
+                                    hasSteps = sudokuUIState.hasSteps,
+                                    onUndo = { sudokuViewModel.onUndo() },
+                                    onErase = { sudokuViewModel.onErase() },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    onNote = { sudokuViewModel.onNote() },
+                                    useHint = { sudokuViewModel.useHint() },
+                                    hintNum = sudokuUIState.hintNum
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            GameHeaderBar(
+                                selectedLevel = sudokuUIState.selectedLevel,
+                                hasMistakeCounter = settingsUIState.hasMistakeCounter && settingsUIState.showMistakes,
+                                mistakesNum = sudokuUIState.mistakesNum,
+                                onRegenerate = { sudokuViewModel.onRegenerate() },
+                                hasTimer = settingsUIState.hasTimer,
+                                isPaused = sudokuUIState.isPaused,
+                                onPause = {
+                                    sudokuViewModel.onPause()
+                                    timerViewModel.pauseTimer()
+                                },
+                                timerViewModel = timerViewModel,
+                                onShowSettings = { showSettings.value = true },
+                                onRestart = {
+                                    timerViewModel.stopTimer()
+                                    isRestartClicked.value = true
                                 }
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                SudokuGrid(
+                                    grid = sudokuUIState.matrix,
+                                    selectedCellRow = sudokuUIState.selectedCellRow,
+                                    selectedCellColumn = sudokuUIState.selectedCellColumn,
+                                    hasHighlightSameNumbers = settingsUIState.hasHighlightSameNumbers,
+                                    onSelectCell = { row: Int, column: Int -> sudokuViewModel.onSelectCell(row, column) },
+                                    hasRowHighlight = settingsUIState.hasRowHighlight,
+                                    isPaused = sudokuUIState.isPaused,
+                                    showMistakes = settingsUIState.showMistakes,
+                                    unlockedCell = sudokuUIState.unlockedCell,
+                                    gridWithNotes = sudokuUIState.matrixWithNotes,
+                                    selectedDigit = sudokuUIState.selectedDigit,
+                                    onBoxCheck = { sudokuViewModel.isUnusedInBox() },
+                                    onRowCheck = { sudokuViewModel.isUnusedInRow() },
+                                    onColumnCheck = { sudokuViewModel.isUnusedInColumn() },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    isLandscape = false
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                SelectionNumbersRow(
+                                    selectionNumbers = sudokuUIState.selectionNumbers,
+                                    onSelection = { digit: Int, isInsertable: Boolean -> sudokuViewModel.onSelection(digit, isInsertable, settingsUIState.showMistakes) },
+                                    cannotInsert = sudokuUIState.isNotesEnabled && currentCell != 0,
+                                    canInsert = { sudokuViewModel.canInsert(it) },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    hapticFeedbackEnabled = settingsUIState.hapticFeedbackEnabled,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                ActionToolbar(
+                                    hasSteps = sudokuUIState.hasSteps,
+                                    onUndo = { sudokuViewModel.onUndo() },
+                                    onErase = { sudokuViewModel.onErase() },
+                                    isNotesEnabled = sudokuUIState.isNotesEnabled,
+                                    onNote = { sudokuViewModel.onNote() },
+                                    useHint = { sudokuViewModel.useHint() },
+                                    hintNum = sudokuUIState.hintNum
+                                )
                             }
                         }
                     }
@@ -489,6 +511,7 @@ fun MainApp(
             }
         }
     }
+}
 }
 
 @Composable
@@ -531,20 +554,18 @@ fun WelcomeDialog(
         onDismissRequest = { onDismiss() },
         modifier = Modifier
             .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.onPrimary)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(6.dp, 6.dp, 6.dp, 12.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             if (hasClosingButton) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(
-                        onClick = { onDismiss() }
-                    ) {
+                    IconButton(onClick = { onDismiss() }) {
                         Icon(
                             Icons.Outlined.Close,
                             contentDescription = "Close icon"
@@ -553,14 +574,29 @@ fun WelcomeDialog(
                 }
             }
             Text(
-                text = "Choose Your Puzzle:",
-                fontWeight = FontWeight.Bold
+                text = "Choose Your Puzzle",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
             for (i in LEVELS.indices) {
-                TextButton(
+                Surface(
                     onClick = { onStartGame(i) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
                 ) {
-                    Text(LEVELS[i])
+                    Text(
+                        text = LEVELS[i],
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
                 }
             }
         }
@@ -575,31 +611,56 @@ fun EndScreen(
     onRegenerate: () -> Unit
 ) {
     Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = "You Won!",
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            color = MaterialTheme.colorScheme.primary
         )
-
-        Row {
-            Text(text = "Difficulty: ")
-            LevelIndicator(level)
+        Spacer(modifier = Modifier.height(16.dp))
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            Text(
+                text = "Difficulty: $level",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
         }
-
         if (hasTimer) {
-            Row {
-                Text(text = "Time: ")
-                Text(text = formattedTime)
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
+                Text(
+                    text = "Time: $formattedTime",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
         }
-
-        TextButton(
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
             onClick = { onRegenerate() },
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.padding(8.dp)
         ) {
-            Text("New Game")
+            Text("New Game", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -607,9 +668,10 @@ fun EndScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(
-    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
     showMistakes: Boolean,
     hasMistakeCounter: Boolean,
+    mistakesNum: Int = 0,
     hasHighlightSameNumbers: Boolean,
     hasRowHighlight: Boolean,
     hasTimer: Boolean,
@@ -625,269 +687,297 @@ fun Settings(
         hapticFeedbackEnabled: Boolean,
     ) -> Unit
 ) {
-    val newTheme = remember { mutableStateOf(theme) }
-    val newShowMistakes = remember { mutableStateOf(showMistakes) }
-    val newHasMistakeCounter = remember { mutableStateOf(hasMistakeCounter) }
-    val newHasRowHighlight = remember { mutableStateOf(hasRowHighlight) }
-    val newHasTimer = remember { mutableStateOf(hasTimer) }
-    val newHasHighlightSameNumbers = remember { mutableStateOf(hasHighlightSameNumbers) }
-    val newHapticFeedback = remember { mutableStateOf(hapticFeedbackEnabled) }
+    val currentShowMistakes = remember { mutableStateOf(showMistakes) }
+    val currentHasMistakeCounter = remember { mutableStateOf(if (showMistakes) hasMistakeCounter else false) }
+    val currentHasHighlightSameNumbers = remember { mutableStateOf(hasHighlightSameNumbers) }
+    val currentHasRowHighlight = remember { mutableStateOf(hasRowHighlight) }
+    val currentHasTimer = remember { mutableStateOf(hasTimer) }
+    val currentHapticFeedback = remember { mutableStateOf(hapticFeedbackEnabled) }
+    val currentTheme = remember { mutableStateOf(theme) }
+
+    val canDisableMistakes = mistakesNum == 0
+
+    fun applySettings() {
+        onSave(
+            currentShowMistakes.value,
+            if (currentShowMistakes.value) currentHasMistakeCounter.value else false,
+            currentTheme.value,
+            currentHasHighlightSameNumbers.value,
+            currentHasRowHighlight.value,
+            currentHasTimer.value,
+            currentHapticFeedback.value
+        )
+    }
 
     BasicAlertDialog(
-        onDismissRequest = {},
+        onDismissRequest = { onDismiss() },
         modifier = Modifier
             .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.onPrimary)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(6.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.Start,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(
+                    onClick = { onDismiss() },
+                    modifier = Modifier.size(32.dp)
                 ) {
-                    Text(text = "Show mistakes")
-                    Switch(
-                        checked = newShowMistakes.value,
-                        onCheckedChange = { isChecked -> newShowMistakes.value = isChecked })
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                ) {
-                    Text(text = "Count mistakes")
-                    Switch(
-                        checked = newHasMistakeCounter.value,
-                        onCheckedChange = { isChecked -> newHasMistakeCounter.value = isChecked }
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = "Close icon",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val showMistakesSwitchEnabled = if (currentShowMistakes.value) canDisableMistakes else true
+
+                // Auto-check mistakes
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
+                        .padding(vertical = 4.dp)
                 ) {
-                    Text(text = "Highlight Same Numbers")
+                    Text(
+                        text = "Auto-check mistakes",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (showMistakesSwitchEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                    )
                     Switch(
-                        checked = newHasHighlightSameNumbers.value,
+                        enabled = showMistakesSwitchEnabled,
+                        checked = currentShowMistakes.value,
                         onCheckedChange = { isChecked ->
-                            newHasHighlightSameNumbers.value = isChecked
+                            currentShowMistakes.value = isChecked
+                            if (!isChecked) {
+                                currentHasMistakeCounter.value = false
+                            }
+                            applySettings()
                         }
                     )
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                ) {
-                    Text(text = "Highlight Rows")
-                    Switch(
-                        checked = newHasRowHighlight.value,
-                        onCheckedChange = { isChecked -> newHasRowHighlight.value = isChecked }
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                ) {
-                    Text(text = "Include Timer")
-                    Switch(
-                        checked = newHasTimer.value,
-                        onCheckedChange = { isChecked -> newHasTimer.value = isChecked }
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                ) {
-                    Text(text = "Haptic Feedback")
-                    Switch(
-                        checked = newHapticFeedback.value,
-                        onCheckedChange = { isChecked -> newHapticFeedback.value = isChecked }
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp, 0.dp, 10.dp, 0.dp)
-                ) {
-                    val isExpanded = remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = isExpanded.value,
-                        onExpandedChange = { isExpanded.value = !isExpanded.value }
-                    ) {
-                        OutlinedTextField(
-                            readOnly = true,
-                            value = newTheme.value,
-                            onValueChange = {},
-                            label = { Text(text = "Theme") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded.value)
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(),
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                        )
 
-                        ExposedDropdownMenu(
-                            expanded = isExpanded.value,
-                            onDismissRequest = { isExpanded.value = false }) {
-                            for (i in THEMES.indices) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = THEMES[i])
-                                    },
-                                    onClick = {
-                                        newTheme.value = THEMES[i]
-                                        isExpanded.value = false
-                                    },
-                                )
-                            }
+                val mistakeCounterSwitchEnabled = currentShowMistakes.value && (if (currentHasMistakeCounter.value) canDisableMistakes else true)
+
+                // Mistake limit (3 strikes)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Mistake limit (3 strikes)",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (mistakeCounterSwitchEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                    )
+                    Switch(
+                        enabled = mistakeCounterSwitchEnabled,
+                        checked = currentShowMistakes.value && currentHasMistakeCounter.value,
+                        onCheckedChange = { isChecked ->
+                            currentHasMistakeCounter.value = isChecked
+                            applySettings()
+                        }
+                    )
+                }
+
+                if (!canDisableMistakes && (currentShowMistakes.value || currentHasMistakeCounter.value)) {
+                    Text(
+                        text = "Mistake settings cannot be disabled during an active puzzle with mistakes.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
+
+                // Highlight same numbers
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(text = "Highlight same numbers", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = currentHasHighlightSameNumbers.value,
+                        onCheckedChange = { isChecked ->
+                            currentHasHighlightSameNumbers.value = isChecked
+                            applySettings()
+                        }
+                    )
+                }
+
+                // Highlight row & column
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(text = "Highlight row & column", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = currentHasRowHighlight.value,
+                        onCheckedChange = { isChecked ->
+                            currentHasRowHighlight.value = isChecked
+                            applySettings()
+                        }
+                    )
+                }
+
+                // Show timer
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(text = "Show timer", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = currentHasTimer.value,
+                        onCheckedChange = { isChecked ->
+                            currentHasTimer.value = isChecked
+                            applySettings()
+                        }
+                    )
+                }
+
+                // Haptic feedback
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(text = "Haptic feedback", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = currentHapticFeedback.value,
+                        onCheckedChange = { isChecked ->
+                            currentHapticFeedback.value = isChecked
+                            applySettings()
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Theme Segmented Control
+                Text(
+                    text = "Theme",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(21.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(21.dp)),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val themes = listOf("system", "light", "dark")
+                    themes.forEach { t ->
+                        val isSelected = currentTheme.value.equals(t, ignoreCase = true)
+                        val segmentBg = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                        val segmentTextColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(21.dp))
+                                .background(segmentBg)
+                                .clickable {
+                                    currentTheme.value = t
+                                    applySettings()
+                                }
+                        ) {
+                            Text(
+                                text = formatThemeName(t),
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = segmentTextColor
+                            )
                         }
                     }
                 }
-
             }
-            Row {
-                TextButton(
-                    onClick = { onCancel() },
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    Text("Cancel")
-                }
-                TextButton(
-                    onClick = {
-                        onSave(
-                            newShowMistakes.value,
-                            newHasMistakeCounter.value,
-                            newTheme.value,
-                            newHasHighlightSameNumbers.value,
-                            newHasRowHighlight.value,
-                            newHasTimer.value,
-                            newHapticFeedback.value,
-                        )
-                        onCancel()
-                    },
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    Text("Save")
-                }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = { onDismiss() },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Done", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             }
         }
     }
-}
-
-@Composable
-fun LevelIndicator(
-    level: String,
-) {
-    Text(
-        text = level,
-        modifier = Modifier.padding(15.dp, 0.dp, 0.dp, 0.dp)
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MistakeCounter(
-    mistakesNum: Int,
+fun GameOverDialog(
     onRegenerate: () -> Unit
 ) {
-    Text(text = "Mistakes: $mistakesNum/3")
-
-    if (mistakesNum == 3) {
-        BasicAlertDialog(
-            onDismissRequest = {},
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.onPrimary)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(6.dp)
-            ) {
-                Text(
-                    text = "Game Over",
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "You made 3 mistakes and lost this game.",
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center,
-                )
-                TextButton(
-                    onClick = { onRegenerate() },
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    Text("Restart")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HintsButton(
-    useHint: () -> Unit,
-    hintNum: Int,
-) {
-    Surface {
-        Button(
-            onClick = { useHint() },
-            modifier = Modifier.padding(8.dp),
-            enabled = hintNum > 0,
-        ) {
-            Icon(
-                Icons.Rounded.Lightbulb,
-                contentDescription = "Hint icon"
-            )
-        }
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier
-                .absoluteOffset(55.dp, 0.dp)
-                .clip(MaterialTheme.shapes.large)
+    BasicAlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
         ) {
             Text(
-                text = hintNum.toString(),
-                modifier = Modifier
-                    .padding(10.dp, 3.dp, 10.dp, 3.dp)
+                text = "Game Over",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "You made 3 mistakes and lost this game.",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { onRegenerate() },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Restart")
+            }
         }
-    }
-}
-
-@Composable
-fun Timer(
-    timerViewModel: TimerViewModel,
-) {
-    val timer by timerViewModel.timer.collectAsState()
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = timerViewModel.formatTime(timer))
     }
 }
 
@@ -907,191 +997,216 @@ fun SudokuGrid(
     onBoxCheck: () -> IntArray?,
     onRowCheck: () -> IntArray?,
     onColumnCheck: () -> IntArray?,
-    isNotesEnabled: Boolean
+    isNotesEnabled: Boolean,
+    isLandscape: Boolean = false
 ) {
-    Box {
-        Column(
-            modifier = Modifier.border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline))
-        ) {
-            for (row in 0 until 9) {
-                val rowDividerColour = if (row % 3 != 0) MaterialTheme.colorScheme.surface
-                else MaterialTheme.colorScheme.outline
-                val outlineColour = MaterialTheme.colorScheme.inversePrimary
-                Row {
-                    for (index in 0 until 9) {
-                        val isCurrentCell = selectedCellRow == row && selectedCellColumn == index
-                        var displayValue = ""
-                        val gridValue = grid[row][index][2].intValue
-                        if (gridValue != 0 && !isPaused) {
-                            displayValue = gridValue.toString()
-                        }
+    val darkBorderColor = MaterialTheme.colorScheme.outline
+    val innerHairlineColor = MaterialTheme.colorScheme.outlineVariant
+    val errorColor = MaterialTheme.colorScheme.error
 
-                        val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(2.dp, darkBorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .aspectRatio(1f, matchHeightConstraintsFirst = isLandscape)
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .drawWithContent {
+                // 1. Draw cell backgrounds and content first
+                drawContent()
 
-                        val backgroundCellColour = if (isCurrentCell) MaterialTheme.colorScheme.tertiary
-                            else if (gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers) MaterialTheme.colorScheme.tertiaryContainer
-                            else MaterialTheme.colorScheme.secondaryContainer
+                // 2. Foreground pass: Draw entire 9x9 grid overlay lines on top
+                val cellWidth = size.width / 9f
+                val cellHeight = size.height / 9f
 
-                        val columnDividerColour = if (index % 3 == 0) MaterialTheme.colorScheme.outline
-                            else MaterialTheme.colorScheme.surface
-                        val orientation = LocalConfiguration.current.orientation
-                        val cellSize = if (orientation == Configuration.ORIENTATION_LANDSCAPE) LocalConfiguration.current.screenHeightDp.dp / (9)
-                            else LocalConfiguration.current.screenWidthDp.dp / (9+1)
+                // Vertical grid lines (index 1..8)
+                for (i in 1 until 9) {
+                    val isBlockBorder = i % 3 == 0
+                    val color = if (isBlockBorder) darkBorderColor else innerHairlineColor
+                    val strokeWidth = if (isBlockBorder) 2.dp.toPx() else 1.dp.toPx()
+                    val x = cellWidth * i
+                    drawLine(
+                        color = color,
+                        start = Offset(x = x, y = 0f),
+                        end = Offset(x = x, y = size.height),
+                        strokeWidth = strokeWidth
+                    )
+                }
 
-                        val cellDescription = buildString {
-                            append("Row ${row + 1}, Column ${index + 1}. ")
-                            if (gridValue != 0) {
-                                append("Value $gridValue. ")
-                                if (grid[row][index][0].intValue != 0) {
-                                    append("Given digit.")
+                // Horizontal grid lines (index 1..8)
+                for (i in 1 until 9) {
+                    val isBlockBorder = i % 3 == 0
+                    val color = if (isBlockBorder) darkBorderColor else innerHairlineColor
+                    val strokeWidth = if (isBlockBorder) 2.dp.toPx() else 1.dp.toPx()
+                    val y = cellHeight * i
+                    drawLine(
+                        color = color,
+                        start = Offset(x = 0f, y = y),
+                        end = Offset(x = size.width, y = y),
+                        strokeWidth = strokeWidth
+                    )
+                }
+            }
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                for (row in 0 until 9) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        for (index in 0 until 9) {
+                            val isCurrentCell = selectedCellRow == row && selectedCellColumn == index
+                            var displayValue = ""
+                            val gridValue = grid[row][index][2].intValue
+                            if (gridValue != 0 && !isPaused) {
+                                displayValue = gridValue.toString()
+                            }
+
+                            val currentGridCellValue = grid[selectedCellRow][selectedCellColumn][2].intValue
+                            val expectedValue = grid[row][index][1].intValue
+                            val initialGridValue = grid[row][index][0].intValue
+                            val isMistake = gridValue != 0 && expectedValue != gridValue && showMistakes
+
+                            val isSameNumber = gridValue > 0 && currentGridCellValue == gridValue && hasHighlightSameNumbers
+                            val isRelated = (row == selectedCellRow || index == selectedCellColumn || (row / 3 == selectedCellRow / 3 && index / 3 == selectedCellColumn / 3)) && hasRowHighlight
+
+                            val backgroundCellColour = when {
+                                isMistake -> MaterialTheme.colorScheme.errorContainer
+                                isCurrentCell -> MaterialTheme.colorScheme.primary
+                                isSameNumber -> MaterialTheme.colorScheme.tertiaryContainer
+                                isRelated -> MaterialTheme.colorScheme.secondaryContainer
+                                else -> MaterialTheme.colorScheme.surface
+                            }
+
+                            val cellDescription = buildString {
+                                append("Row ${row + 1}, Column ${index + 1}. ")
+                                if (gridValue != 0) {
+                                    append("Value $gridValue. ")
+                                    if (initialGridValue != 0) {
+                                        append("Given digit.")
+                                    } else {
+                                        append("Entered digit.")
+                                    }
                                 } else {
-                                    append("Entered digit.")
+                                    val activeNotes = gridWithNotes[row][index].filter { it.intValue > 0 }.map { it.intValue }
+                                    if (activeNotes.isNotEmpty()) {
+                                        append("Notes: ${activeNotes.joinToString(", ")}.")
+                                    } else {
+                                        append("Empty cell.")
+                                    }
                                 }
-                            } else {
-                                val activeNotes = gridWithNotes[row][index].filter { it.intValue > 0 }.map { it.intValue }
-                                if (activeNotes.isNotEmpty()) {
-                                    append("Notes: ${activeNotes.joinToString(", ")}.")
-                                } else {
-                                    append("Empty cell.")
+                                if (isCurrentCell) {
+                                    append(" Selected.")
                                 }
                             }
-                            if (isCurrentCell) {
-                                append(" Selected.")
-                            }
-                        }
 
-                        Column (
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .size(cellSize)
-                                .background(backgroundCellColour)
-                                .semantics { contentDescription = cellDescription }
-                                .clickable { onSelectCell(row, index) }
-                                .drawBehind {
-                                    val hasVerticalOutline =
-                                        selectedCellColumn == index || selectedCellColumn == index - 1
+                            val isDark = isSystemInDarkTheme()
+                            val notesTextColor = if (isDark) NotesTextDark else NotesTextLight
 
-                                    if (!isCurrentCell) {
-                                        if (hasVerticalOutline && hasRowHighlight) {
-                                            drawLine(
-                                                start = Offset(x = 0f, y = size.height),
-                                                end = Offset(x = 0f, y = 0f),
-                                                color = outlineColour,
-                                                strokeWidth = 1.dp.toPx()
-                                            )
-                                        } else if (index != 0) {
-                                            drawLine(
-                                                start = Offset(x = 0f, y = size.height),
-                                                end = Offset(x = 0f, y = 0f),
-                                                color = columnDividerColour,
-                                                strokeWidth = 1.dp.toPx()
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .background(backgroundCellColour)
+                                    .semantics { contentDescription = cellDescription }
+                                    .clickable { onSelectCell(row, index) }
+                                    .drawBehind {
+                                        // Highlight active selected cell border if selected cell has an error
+                                        if (isCurrentCell && isMistake) {
+                                            drawRect(
+                                                color = errorColor,
+                                                style = Stroke(width = 2.dp.toPx())
                                             )
                                         }
                                     }
+                            ) {
+                                val scale = remember { Animatable(1f) }
+                                var shouldAnimate = unlockedCell[0] == row && unlockedCell[1] == index
 
-                                    val hasHorizontalOutline =
-                                        selectedCellRow == row || selectedCellRow == row - 1
-                                    if (!isCurrentCell) {
-                                        if (hasHorizontalOutline && hasRowHighlight) {
-                                            drawLine(
-                                                start = Offset(
-                                                    x = size.width - 1.dp.toPx(),
-                                                    y = 0f
-                                                ),
-                                                end = Offset(x = 0f, y = 0f),
-                                                color = outlineColour,
-                                                strokeWidth = 1.dp.toPx()
-                                            )
-                                        } else if (row != 0) {
-                                            drawLine(
-                                                start = Offset(
-                                                    x = size.width - 1.dp.toPx(),
-                                                    y = 0f
-                                                ),
-                                                end = Offset(x = 0f, y = 0f),
-                                                color = rowDividerColour,
-                                                strokeWidth = 1.dp.toPx()
-                                            )
-                                        }
+                                if (isNotesEnabled && selectedDigit != 0) {
+                                    val repeatedInBox = onBoxCheck()
+                                    val repeatedInRow = onRowCheck()
+                                    val repeatedInColumn = onColumnCheck()
+
+                                    shouldAnimate = (repeatedInBox != null && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
+                                            (repeatedInRow != null && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
+                                            (repeatedInColumn != null && row == repeatedInColumn[0] && index == repeatedInColumn[1])
+                                }
+
+                                if (shouldAnimate) {
+                                    LaunchedEffect(true) {
+                                        scale.animateTo(1f, animationSpec = tween(0))
+                                        scale.animateTo(2.5f, animationSpec = tween(350))
+                                        scale.animateTo(1f, animationSpec = tween(350))
+                                    }
+                                } else {
+                                    LaunchedEffect(true) {
+                                        scale.animateTo(1f, animationSpec = tween(0))
                                     }
                                 }
-                        ) {
-                            val scale = remember { Animatable(1f) }
-                            var shouldAnimate = unlockedCell[0] == row && unlockedCell[1] == index
 
-                            if (isNotesEnabled && selectedDigit != 0) {
-                                val repeatedInBox = onBoxCheck()
-                                val repeatedInRow = onRowCheck()
-                                val repeatedInColumn = onColumnCheck()
+                                val gridWithNoteCell = gridWithNotes[row][index]
+                                val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
 
-                                shouldAnimate = (repeatedInBox != null && row == repeatedInBox[0] && index == repeatedInBox[1]) ||
-                                        (repeatedInRow != null && row == repeatedInRow[0] && index == repeatedInRow[1]) ||
-                                        (repeatedInColumn != null && row == repeatedInColumn[0] && index == repeatedInColumn[1])
-                            }
-
-                            if (shouldAnimate) {
-                                LaunchedEffect(true) {
-                                    scale.animateTo(1f, animationSpec = tween(0))
-                                    scale.animateTo(3f, animationSpec = tween(350))
-                                    scale.animateTo(1f, animationSpec = tween(350))
-                                }
-                            } else {
-                                LaunchedEffect(true) {
-                                    scale.animateTo(1f, animationSpec = tween(0))
-                                }
-                            }
-                            val gridWithNoteCell = gridWithNotes[row][index]
-                            val hasNotesInCurrentCell = gridWithNoteCell.any { it.intValue > 0 }
-                            if (hasNotesInCurrentCell && displayValue == "" && !isPaused) {
-                                var actualIndex = 0
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier.size(cellSize)
-                                ) {
-                                    for (rowIndex in 0 until 3) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier
-                                                .heightIn(max = cellSize / 3)
-                                                .fillMaxSize()
-                                        ) {
-                                            for (i in 0 until 3) {
-                                                val noteDisplay = if (gridWithNoteCell[actualIndex].intValue == 0) ""
-                                                    else gridWithNoteCell[actualIndex].intValue.toString()
-                                                Text(
-                                                    text = noteDisplay,
-                                                    fontSize = 8.sp,
-                                                    textAlign = TextAlign.Center,
-                                                    modifier = Modifier
-                                                        .offset(y = -4.dp)
-                                                        .weight(1f)
-                                                )
-                                                actualIndex++
+                                if (hasNotesInCurrentCell && displayValue == "" && !isPaused) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.SpaceEvenly
+                                    ) {
+                                        var noteIdx = 0
+                                        repeat(3) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                repeat(3) {
+                                                    val noteVal = gridWithNoteCell[noteIdx].intValue
+                                                    val noteDisplay = if (noteVal == 0) "" else noteVal.toString()
+                                                    Text(
+                                                        text = noteDisplay,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = notesTextColor,
+                                                        textAlign = TextAlign.Center,
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    noteIdx++
+                                                }
                                             }
                                         }
                                     }
-                                    actualIndex = 0
-                                }
-                            } else {
-                                val expectedValue = grid[row][index][1].intValue
-                                val initialGridValue = grid[row][index][0].intValue
-                                val colour = if (gridValue != 0 && expectedValue != gridValue && showMistakes) Color.Red
-                                    else if (isCurrentCell) MaterialTheme.colorScheme.onTertiary
-                                    else if (initialGridValue == 0) MaterialTheme.colorScheme.tertiary
-                                    else MaterialTheme.colorScheme.onSecondaryContainer
-                                Text(
-                                    text = displayValue,
-                                    Modifier
-                                        .graphicsLayer {
+                                } else {
+                                    val textColour = when {
+                                        isMistake -> MaterialTheme.colorScheme.error
+                                        isCurrentCell -> MaterialTheme.colorScheme.onPrimary
+                                        initialGridValue != 0 -> MaterialTheme.colorScheme.onSurface
+                                        else -> MaterialTheme.colorScheme.secondary
+                                    }
+                                    val textWeight = if (initialGridValue != 0) FontWeight.Bold else FontWeight.Medium
+
+                                    Text(
+                                        text = displayValue,
+                                        fontSize = 22.sp,
+                                        fontWeight = textWeight,
+                                        color = textColour,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.graphicsLayer {
                                             scaleX = scale.value
                                             scaleY = scale.value
                                             transformOrigin = TransformOrigin.Center
-                                        },
-                                    color = colour
-                                )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1102,36 +1217,7 @@ fun SudokuGrid(
 }
 
 @Composable
-fun RestartButton(
-    onRestart: () -> Unit,
-) {
-    IconButton(
-        onClick = { onRestart() }
-    ) {
-        Icon(
-            Icons.Rounded.Refresh,
-            contentDescription = "Refresh icon"
-        )
-    }
-}
-
-@Composable
-fun EraseButton(
-    onErase: () -> Unit
-) {
-    Button(
-        onClick = { onErase() },
-        modifier = Modifier.padding(8.dp),
-    ) {
-        Icon(
-            Icons.Rounded.Delete,
-            contentDescription = "Icon to clear a cell"
-        )
-    }
-}
-
-@Composable
-fun SelectionNumbers(
+fun SelectionNumbersRow(
     selectionNumbers: Array<Int>,
     onSelection: (number: Int, canInsert: Boolean) -> Unit,
     cannotInsert: Boolean,
@@ -1141,6 +1227,7 @@ fun SelectionNumbers(
 ) {
     val isClicked = remember { mutableStateOf(false) }
     val isInsertable = remember { mutableStateOf(false) }
+
     fun onSelect(label: Int) {
         isInsertable.value = canInsert(label)
         if (cannotInsert) {
@@ -1161,94 +1248,332 @@ fun SelectionNumbers(
             isClicked.value = false
         }
     }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         for (i in 0 until 9) {
             val label = i + 1
-            val isCountAvailable = selectionNumbers[i] > 0
-            val isAvailable = isCountAvailable || isNotesEnabled
-            val isCompleted = selectionNumbers[i] == 0
+            val remaining = selectionNumbers[i]
+            val isCompleted = remaining == 0
+            val isAvailable = remaining > 0 || isNotesEnabled
 
-            val labelColor = if (isCompleted) MaterialTheme.colorScheme.outline
-                else if (isAvailable) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.inversePrimary
+            val containerColor = if (isCompleted) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+
+            val contentColor = if (isCompleted) {
+                MaterialTheme.colorScheme.outline
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
 
             Surface(
                 onClick = { onSelect(label) },
                 enabled = isAvailable,
-                modifier = Modifier.weight(1f)
+                shape = RoundedCornerShape(12.dp),
+                color = containerColor,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shadowElevation = 0.dp,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
             ) {
-                val displayValue = label.toString()
-                Text(
-                    text = displayValue,
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    textAlign = TextAlign.Center,
-                    color = labelColor
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = label.toString(),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (remaining > 0) remaining.toString() else "",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = contentColor.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 3.dp, end = 5.dp)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun UndoButton(
-    isEnabled: Boolean = false,
-    onUndo: () -> Unit
+fun SelectionNumbersGrid3x3(
+    selectionNumbers: Array<Int>,
+    onSelection: (number: Int, canInsert: Boolean) -> Unit,
+    cannotInsert: Boolean,
+    canInsert: (number: Int) -> Boolean,
+    isNotesEnabled: Boolean,
+    hapticFeedbackEnabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
-    Button(
-        onClick = { onUndo() },
-        enabled = isEnabled,
-        modifier = Modifier.padding(8.dp),
-    ) {
-        Icon(
-            Icons.AutoMirrored.Filled.Undo,
-            contentDescription = "Undo icon"
-        )
-    }
-}
+    val isClicked = remember { mutableStateOf(false) }
+    val isInsertable = remember { mutableStateOf(false) }
 
-@Composable
-fun NotesButton(
-    isActive: Boolean = false,
-    onNote: () -> Unit
-) {
-    Button(
-        onClick = { onNote() },
-        modifier = Modifier.padding(8.dp)
-    ) {
-        Icon(
-            Icons.Filled.Edit,
-            contentDescription = "Notes button",
-            tint = if (isActive) Color.Green else LocalContentColor.current
-        )
+    fun onSelect(label: Int) {
+        isInsertable.value = canInsert(label)
+        if (cannotInsert) {
+            isClicked.value = true
+        } else {
+            onSelection(label, isInsertable.value)
+            if (isNotesEnabled && !isInsertable.value) {
+                isClicked.value = true
+            }
+        }
     }
-}
 
-@Composable
-fun SettingsBar(
-    onShowSettings: () -> Unit,
-    restartButton: @Composable () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Vibrator::class.java)
+    LaunchedEffect(isClicked.value) {
+        if (isClicked.value && hapticFeedbackEnabled) {
+            triggerVibration(vibrator)
+            isClicked.value = false
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        restartButton()
-        IconButton(
-            onClick = { onShowSettings() },
-            modifier = Modifier.padding(0.dp, 20.dp, 0.dp, 20.dp)
-        ) {
-            Icon(
-                Icons.Filled.Settings,
-                contentDescription = "Settings icon"
-            )
+        for (row in 0 until 3) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                for (col in 0 until 3) {
+                    val idx = row * 3 + col
+                    val label = idx + 1
+                    val remaining = selectionNumbers[idx]
+                    val isCompleted = remaining == 0
+                    val isAvailable = remaining > 0 || isNotesEnabled
+
+                    val containerColor = if (isCompleted) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    }
+
+                    val contentColor = if (isCompleted) {
+                        MaterialTheme.colorScheme.outline
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+
+                    Surface(
+                        onClick = { onSelect(label) },
+                        enabled = isAvailable,
+                        shape = RoundedCornerShape(12.dp),
+                        color = containerColor,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        shadowElevation = 0.dp,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Text(
+                                text = label.toString(),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = contentColor,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = if (remaining > 0) remaining.toString() else "",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = contentColor.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(bottom = 3.dp, end = 6.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun GameIndications(
+fun ActionToolbar(
+    hasSteps: Boolean,
+    onUndo: () -> Unit,
+    onErase: () -> Unit,
+    isNotesEnabled: Boolean,
+    onNote: () -> Unit,
+    useHint: () -> Unit,
+    hintNum: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Undo Button
+        Surface(
+            onClick = { onUndo() },
+            enabled = hasSteps,
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            shadowElevation = 0.dp,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = "Undo icon",
+                    tint = if (hasSteps) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                )
+                Text(
+                    text = "Undo",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (hasSteps) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+
+        // Erase Button
+        Surface(
+            onClick = { onErase() },
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            shadowElevation = 0.dp,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    Icons.Rounded.Delete,
+                    contentDescription = "Erase cell icon",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Erase",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        // Notes Button (Explicit ON / OFF active state)
+        val notesContainerColor = if (isNotesEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+        val notesContentColor = if (isNotesEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+
+        Surface(
+            onClick = { onNote() },
+            shape = RoundedCornerShape(12.dp),
+            color = notesContainerColor,
+            border = BorderStroke(1.dp, if (isNotesEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            shadowElevation = 0.dp,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = "Notes button",
+                    tint = notesContentColor
+                )
+                Text(
+                    text = if (isNotesEnabled) "Notes ON" else "Notes",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = notesContentColor
+                )
+            }
+        }
+
+        // Hints Button
+        Surface(
+            onClick = { if (hintNum > 0) useHint() },
+            enabled = hintNum > 0,
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            shadowElevation = 0.dp,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.Lightbulb,
+                        contentDescription = "Hint icon",
+                        tint = if (hintNum > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        text = "Hint",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (hintNum > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 4.dp)
+                ) {
+                    Text(
+                        text = hintNum.toString(),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GameHeaderBar(
     selectedLevel: String,
     hasMistakeCounter: Boolean,
     mistakesNum: Int,
@@ -1257,31 +1582,131 @@ fun GameIndications(
     isPaused: Boolean,
     onPause: () -> Unit,
     timerViewModel: TimerViewModel,
+    onShowSettings: () -> Unit,
+    onRestart: () -> Unit,
 ) {
-    LevelIndicator(level = selectedLevel)
-    if (hasMistakeCounter) {
-        MistakeCounter(
-            mistakesNum = mistakesNum,
-            onRegenerate = { onRegenerate() }
-        )
-    }
-    if (hasTimer) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Timer(timerViewModel)
-            IconButton(
-                onClick = { onPause() }
+            // Level Pill Badge
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                shadowElevation = 0.dp
             ) {
-                val icon =
-                    if (isPaused) Icons.Filled.PlayArrow
-                    else Icons.Filled.Pause
-                val iconDescription =
-                    if (isPaused) "Play icon" else "Pause icon"
-                Icon(
-                    icon,
-                    contentDescription = iconDescription
+                Text(
+                    text = selectedLevel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 )
+            }
+
+            // Mistakes Pill Badge
+            if (hasMistakeCounter) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (mistakesNum > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, if (mistakesNum > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shadowElevation = 0.dp
+                ) {
+                    Text(
+                        text = "Mistakes: $mistakesNum/3",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = if (mistakesNum > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+                if (mistakesNum == 3) {
+                    GameOverDialog(onRegenerate = onRegenerate)
+                }
+            }
+
+            // Timer Pill Badge
+            if (hasTimer) {
+                val timerValue by timerViewModel.timer.collectAsState()
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shadowElevation = 0.dp
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp)
+                    ) {
+                        Text(
+                            text = timerViewModel.formatTime(timerValue),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        IconButton(
+                            onClick = onPause,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                                contentDescription = if (isPaused) "Play icon" else "Pause icon",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action icons (Restart, Settings)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                onClick = onRestart,
+                shadowElevation = 0.dp,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Rounded.Refresh,
+                        contentDescription = "Restart puzzle icon",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                onClick = onShowSettings,
+                shadowElevation = 0.dp,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "Settings icon",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
