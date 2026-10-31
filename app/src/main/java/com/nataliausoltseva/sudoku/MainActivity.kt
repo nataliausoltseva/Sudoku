@@ -5,9 +5,9 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.HapticFeedbackConstants
-import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -102,6 +102,7 @@ import nl.dionsegijn.konfetti.core.PartySystem
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             val context = LocalContext.current.applicationContext
             val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(context))
@@ -109,8 +110,14 @@ class MainActivity : ComponentActivity() {
             val timerViewModel: TimerViewModel = viewModel()
             val orientation = LocalConfiguration.current.orientation
             val view = LocalView.current
-            view.windowInsetsController?.hide(android.view.WindowInsets.Type.systemBars())
-            view.windowInsetsController?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            androidx.compose.runtime.SideEffect {
+                val window = (view.context as? android.app.Activity)?.window
+                if (window != null) {
+                    val controller = androidx.core.view.WindowCompat.getInsetsController(window, view)
+                    controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
             MainApp(
                 settingsViewModel,
                 sudokuViewModel,
@@ -118,6 +125,34 @@ class MainActivity : ComponentActivity() {
                 orientation == Configuration.ORIENTATION_LANDSCAPE
             )
         }
+    }
+}
+
+@androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+@Suppress("NewApi")
+private fun vibrateApi29(vibrator: Vibrator) {
+    vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+}
+
+@androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.O)
+@Suppress("NewApi")
+private fun vibrateApi26(vibrator: Vibrator) {
+    vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+}
+
+@Suppress("DEPRECATION")
+private fun vibrateLegacy(vibrator: Vibrator) {
+    vibrator.vibrate(100L)
+}
+
+private fun triggerVibration(vibrator: Vibrator?) {
+    if (vibrator == null) return
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        vibrateApi29(vibrator)
+    } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        vibrateApi26(vibrator)
+    } else {
+        vibrateLegacy(vibrator)
     }
 }
 
@@ -252,14 +287,14 @@ fun MainApp(
                     )
                     KonfettiUI()
                     LaunchedEffect(true) {
-                        if (settingsUIState.hapticFeedbackEnabled) {
-                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                        if (settingsUIState.hapticFeedbackEnabled && vibrator != null) {
+                            triggerVibration(vibrator)
                             delay(500)
-                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            triggerVibration(vibrator)
                             delay(1000)
-                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            triggerVibration(vibrator)
                             delay(500)
-                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+                            triggerVibration(vibrator)
                         }
                     }
                 } else {
@@ -1122,7 +1157,7 @@ fun SelectionNumbers(
     val vibrator = context.getSystemService(Vibrator::class.java)
     LaunchedEffect(isClicked.value) {
         if (isClicked.value && hapticFeedbackEnabled) {
-            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
+            triggerVibration(vibrator)
             isClicked.value = false
         }
     }

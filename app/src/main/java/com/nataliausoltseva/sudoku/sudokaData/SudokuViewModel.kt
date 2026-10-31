@@ -241,7 +241,7 @@ class SudokuViewModel : ViewModel() {
         val grid = uiState.value.matrix
         val gridWithNotes = uiState.value.matrixWithNotes
 
-        val step = steps.removeLast()
+        val step = steps.removeAt(steps.lastIndex)
         val cellRow = step.xIndex
         val cellColumn = step.yIndex
 
