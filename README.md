@@ -59,3 +59,31 @@ When you make 3 mistakes, the game is over (only if you enabled it from the sett
 <img src="./screenshots/end-screen.png" style="height: '500px';"  alt=""/>
 
 Once you have insterted all digits correctly, you won the game. It uses [Konfetti](https://github.com/DanielMartinus/Konfetti). From this screen, you can start new game. All settings for the game are going to be reset, except theme. Theme is saved by DataStore.
+
+---
+
+## 🚀 Planned Features & Vision
+
+### Phase 1: Store Readiness & Analytics (MVP Release)
+- [ ] **Persistent Statistics & Analytics**: Track win rates, best completion times, average solve times, and games played using DataStore/Room.
+- [ ] **Material You Dynamic Color**: Support dynamic system theming on Android 12+ (Monet engine).
+- [ ] **Google Play Store Assets & Optimization**: App store listing descriptions, feature graphics, localized metadata, and privacy disclosures ("100% Ad-Free, No Tracking").
+
+### Phase 2: Engagement & Retention
+- [ ] **Daily Challenges & Streak Tracking**: Daily puzzle calendar system with streak badges and reward celebrations to boost daily active users.
+- [ ] **Adaptive UI for Tablets & Foldables**: Dual-pane Compose layout for larger screens (tablets, foldables, Chromebooks) utilizing Material 3 Adaptive Layouts.
+- [ ] **Google Play Games Integration**: Achievements (e.g. "First Win", "Master Solver", "7-Day Streak") and optional leaderboards.
+- [ ] **Home Screen Widget**: Glance widget for quick access to the Daily Challenge.
+
+### Phase 3: Smart Features & Advanced AI
+- [ ] **Explanatory "Technique-Based" Hints**: Replace random cell revelations with interactive logical explanations (e.g., Naked Singles, Hidden Pairs, X-Wing) to serve as a Sudoku tutor.
+- [ ] **Camera / Paper Sudoku Scanner**: Offline OCR scanner using CameraX and ML Kit Text Recognition to scan and solve physical newspaper/book Sudoku puzzles.
+- [ ] **Additional Puzzle Variants**: Support for mini 6x6 grids, Killer Sudoku, or custom seed generators.
+
+---
+
+## 📄 License & Copyright
+
+Copyright © 2025-2026 Natalia Usoltseva. All rights reserved.
+
+This project is open source and available under the [MIT License](LICENSE).
